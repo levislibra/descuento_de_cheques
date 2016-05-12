@@ -2,32 +2,28 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 {
-    'name': 'Cheques de terceros',
+    'name': 'Descuento de cheques',
     'version': '1.0',
     'author': 'Libra Levis',
     'category': 'Financiera',
-    'summary': 'Cheques de terceros',
+    'summary': 'Descuento de cheques',
     'description': """
-Cheques
+Descuento de cheques
 ===========================
 
-Manejo de cartera de cheques de terceros.
+Manejo de operatoria de descuento de cheques a clientes.
 
 """,
     'website': 'www.levislibra.com.ar',
-    'depends': [],
+    'depends': [cheques_de_terceros],
     'test': [
         
     ],
 
     'data': [
-        'cheques_de_terceros_view.xml',
         'liquidacion_view.xml',
 
     ],
-#    'update_xml': [
-#        'cheques_de_terceros_view.xml',
-#    ],
     'installable': True,
     'auto_install': False,
 }
