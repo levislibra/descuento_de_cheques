@@ -32,8 +32,8 @@ from openerp.exceptions import UserError
 import cheques_de_terceros
 
 
-class liquidacion(osv.Model):
-    _name = 'liquidacion'
+class descuento_de_cheques(osv.Model):
+    _name = 'descuento.de.cheques'
     _description = 'liquidacion de cheques'
     _columns =  {
         'id': fields.integer('Nro liquidacion'),

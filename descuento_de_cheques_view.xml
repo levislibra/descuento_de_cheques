@@ -4,9 +4,9 @@
 
       <!-- Liquidacions - Formularios de creacion  -->
 
-        <record id="liquidacion_tree" model="ir.ui.view">
-        <field name="name">Liquidacion Tree</field>
-        <field name="model">liquidacion</field>
+        <record id="descuento_de_cheques_tree" model="ir.ui.view">
+        <field name="name">Descuento de cheques Tree</field>
+        <field name="model">descuento.de.cheques</field>
         <field name="arch" type="xml">
             <tree string="Lista de liquidaciones">
                 <field name="id"/>
@@ -18,9 +18,9 @@
         </field>
     </record>
 
-    <record id="liquidacion_form" model="ir.ui.view">
-        <field name="name">Liquidacion Form</field>
-        <field name="model">liquidacion</field>
+    <record id="descuento_de_cheques_form" model="ir.ui.view">
+        <field name="name">Descuento de cheques Form</field>
+        <field name="model">descuento.de.cheques</field>
         <field name="arch" type="xml">
             <form string="Formulario de liquidacion" editable="bottom">
                 <header>
@@ -39,20 +39,20 @@
         </field>
     </record>
 
-    <record id="action_liquidacion" model="ir.actions.act_window">
+    <record id="action_descuento_de_cheques" model="ir.actions.act_window">
         <field name="name">Liqudiaciones</field>
-        <field name="res_model">liquidacion</field>
+        <field name="res_model">descuento.de.cheques</field>
         <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="liquidacion_tree"/>
+        <field name="view_id" ref="descuento_de_cheques_tree"/>
     </record>
 
 
-    <!-- Menu Principal del modulo (barra superior) - Cheques  
-    <menuitem id="menu_cheques" name="Cheques" />-->
+    <!-- Menu Principal del modulo (barra superior) - Liquidacion -->
+    <menuitem id="menu_descuento_de_cheques" name="Liquidaciones" />
     
-    <!-- SubMenu liquidacion Lista -->
-    <menuitem id="liquidaciones_lista" name="Liquidaciones" parent="menu_cheques"  sequence="0" />
-    <menuitem id="submenu_cheques_lista_action" name="Listar" parent="liquidaciones_lista" action="action_liquidacion"  sequence="0" />
+    <!-- SubMenu Liquidaciones Lista -->
+    <menuitem id="menu_descuento_de_cheques_lista" name="Liquidaciones" parent="menu_descuento_de_cheques"  sequence="0" />
+    <menuitem id="submenu_menu_descuento_de_cheques_action" name="Listar" parent="menu_descuento_de_cheques_lista" action="action_liquidacion"  sequence="0" />
 
     </data>
 </openerp>

@@ -15,13 +15,13 @@ Manejo de operatoria de descuento de cheques a clientes.
 
 """,
     'website': 'www.levislibra.com.ar',
-    'depends': [cheques_de_terceros],
+    'depends': [],
     'test': [
         
     ],
 
     'data': [
-        'liquidacion_view.xml',
+        'descuento_de_cheques_view.xml',
 
     ],
     'installable': True,
