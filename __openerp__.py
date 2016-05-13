@@ -3,7 +3,7 @@
 
 {
     'name': 'Descuento de cheques',
-    'version': '1.0',
+    'version': '1.1',
     'author': 'Libra Levis',
     'category': 'Financiera',
     'summary': 'Descuento de cheques',

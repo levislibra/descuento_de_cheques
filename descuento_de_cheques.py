@@ -38,6 +38,7 @@ class tasas_add_fields(osv.Model):
     _inherit = 'cheques.de.terceros'
 
     _columns = {
+        'liquidacion_id': fields.many2one('descuento.de.cheques', 'Liquidacion id'),
 		'tasa_fija_descuento': fields.float('Tasa Fija'),
         'tasa_mensual_descuento': fields.float('Tasa Mensual'),
         'fecha_acreditacion_descuento': fields.float('Fecha de acreditacion'),
@@ -65,7 +66,7 @@ class descuento_de_cheques(osv.Model):
         'fecha_liquidacion': fields.date('Fecha liquidacion'),
         'active': fields.boolean('Activa', help="Cancelar liquidacion luego de validarla"),
         'cliente_id': fields.many2one('res.partner', 'Cliente'),
-        'cheques_ids': fields.one2many('cheques.de.terceros', 'id', 'Cheques', ondelete='cascade'),
+        'cheques_ids': fields.one2many('cheques.de.terceros', 'liquidacion_id', 'Cheques', ondelete='cascade'),
 
 
         'name': fields.char("Numero del cheque", size=8),
