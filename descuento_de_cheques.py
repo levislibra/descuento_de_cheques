@@ -29,12 +29,37 @@ from openerp.http import request
 from operator import itemgetter
 from openerp.exceptions import UserError
 
-import cheques_de_terceros
+import openerp.addons.cheques_de_terceros
+
+# Add a new floats fields and date object cheques.de.terceros
+class tasas_add_fields(osv.Model):
+    # This OpenERP object inherits from cheques.de.terceros
+    # to add a new float field
+    _inherit = 'cheques.de.terceros'
+
+    _columns = {
+		'tasa_fija_descuento': fields.float('Tasa Fija'),
+        'tasa_mensual_descuento': fields.float('Tasa Mensual'),
+        'fecha_acreditacion_descuento': fields.float('Fecha de acreditacion'),
+    }
+
+# Add a new floats fields object res.partner
+class res_partner_add_fields(osv.Model):
+    # This OpenERP object inherits from res.partner
+    # to add a new textual field
+    _inherit = 'res.partner'
+    #'res.partner'
+
+    _columns = {
+        'tasa_fija_recomendada' : fields.float('Tasa Fija Recomendada'),
+        'tasa_mensual_recomendada' : fields.float('Tasa Mensual Recomendada'),
+    }
 
 
 class descuento_de_cheques(osv.Model):
     _name = 'descuento.de.cheques'
     _description = 'liquidacion de cheques'
+    _rec_name = 'id'
     _columns =  {
         'id': fields.integer('Nro liquidacion'),
         'fecha_liquidacion': fields.date('Fecha liquidacion'),
@@ -48,7 +73,7 @@ class descuento_de_cheques(osv.Model):
     }
     _defaults = {
     	'state': 'cotizacion',
-    	#''
+    	'active': True,
 
     }
     _sql_constraints = [

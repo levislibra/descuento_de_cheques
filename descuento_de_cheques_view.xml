@@ -52,7 +52,7 @@
     
     <!-- SubMenu Liquidaciones Lista -->
     <menuitem id="menu_descuento_de_cheques_lista" name="Liquidaciones" parent="menu_descuento_de_cheques"  sequence="0" />
-    <menuitem id="submenu_menu_descuento_de_cheques_action" name="Listar" parent="menu_descuento_de_cheques_lista" action="action_liquidacion"  sequence="0" />
+    <menuitem id="submenu_menu_descuento_de_cheques_action" name="Listar" parent="menu_descuento_de_cheques_lista" action="action_descuento_de_cheques"  sequence="0" />
 
     </data>
 </openerp>
