@@ -63,7 +63,7 @@ class descuento_de_cheques(osv.Model):
     _rec_name = 'id'
     _columns =  {
         'id': fields.integer('Nro liquidacion'),
-        'fecha_liquidacion': fields.date('Fecha liquidacion'),
+        'fecha_liquidacion': fields.date('Fecha liquidacion', required=True),
         'active': fields.boolean('Activa', help="Cancelar liquidacion luego de validarla"),
         'cliente_id': fields.many2one('res.partner', 'Cliente'),
         'cheques_ids': fields.one2many('cheques.de.terceros', 'liquidacion_id', 'Cheques', ondelete='cascade'),
@@ -73,6 +73,7 @@ class descuento_de_cheques(osv.Model):
         'state': fields.selection([('cotizacion', 'Cotizacion'), ('confirmada', 'Confirmada')], string='Status', readonly=True, track_visibility='onchange'),
     }
     _defaults = {
+		'fecha_liquidacion': lambda *a: time.strftime('%Y-%m-%d'),
     	'state': 'cotizacion',
     	'active': True,
 
