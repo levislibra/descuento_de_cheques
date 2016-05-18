@@ -2,6 +2,58 @@
 <openerp>
     <data>
 
+      <!-- extends_cheque - Formularios de creacion  -->
+
+        <record id="extends_cheque_tree" model="ir.ui.view">
+            <field name="name">Extends cheque Tree</field>
+            <field name="model">extends.cheque</field>
+            <field name="arch" type="xml">
+                <tree string="Cheques" editable="bottom">
+                    <field name="name"/>
+                    <field name="firmante_id"/>
+                    <field name="banco_id"/>
+                    <field name="importe"  widget='monetary'/>
+                    <field name="fecha_vencimiento"/>
+                    <field name="fecha_acreditacion_descuento"/>
+                    <field name="dias_descuento"/>
+                    <field name="tasa_fija_descuento"/>
+                    <field name="monto_fijo_descuento" widget='monetary'/>
+                    <field name="tasa_mensual_descuento"/>
+                    <field name="monto_mensual_descuento"/>
+                    <field name="monto_neto_descuento"/>
+                </tree>
+            </field>
+        </record>
+
+
+        <record id="extends_cheque_form" model="ir.ui.view">
+            <field name="name">Extends Cheque Form</field>
+            <field name="model">extends.cheque</field>
+            <field name="arch" type="xml">
+                <form string="Formulario de cheque" editable="bottom">
+                    <header>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <field name="firmante_id"/>
+                            <field name="banco_id"/>
+                            <field name="name"/>
+                            <field name="importe" widget="monetary"/>
+                            <field name="fecha_vencimiento"/>
+                            <field name="fecha_acreditacion_descuento"/>
+                            <field name="tasa_fija_descuento"/>
+                            <field name="tasa_mensual_descuento"/>
+                            <!--<field name="monto_fijo_descuento"/>-->
+                        </group>
+                        <group>
+                            
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
       <!-- Liquidacions - Formularios de creacion  -->
 
         <record id="descuento_de_cheques_tree" model="ir.ui.view">
