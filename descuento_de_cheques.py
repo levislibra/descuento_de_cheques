@@ -32,11 +32,11 @@ from openerp.exceptions import UserError
 import openerp.addons.cheques_de_terceros
 
 # Add a new floats fields and date object cheques.de.terceros
-class extends_cheque(osv.Model):
+class cheques_de_terceros(osv.Model):
     # This OpenERP object inherits from cheques.de.terceros
     # to add a new float field
     _inherit = 'cheques.de.terceros'
-    _name = 'extends.cheque'
+    _name = 'cheques.de.terceros'
     _description = 'opciones extras de cheques para calculo del descuento'
 
 
@@ -49,7 +49,6 @@ class extends_cheque(osv.Model):
         'fecha_acreditacion_descuento': fields.date('Acreditacion'),
         'monto_neto_descuento': fields.float(string='Neto', compute='_calcular_descuento_neto', readonly=True, store=True),
         'dias_descuento': fields.integer(string='Dias', compute='_calcular_descuento_dias', readonly=True, store=True),
-        'fecha_s': fields.char(string='Fecha_s', compute='_calcular_descuento_fijo', readonly=True, store=True),
     }
     @api.one
     @api.depends('importe', 'tasa_fija_descuento')
@@ -77,7 +76,6 @@ class extends_cheque(osv.Model):
 	    		else:
 	    			self.dias_descuento = 0
 
-
     @api.one
     @api.depends('monto_fijo_descuento', 'monto_mensual_descuento')
     def _calcular_descuento_neto(self):
@@ -86,7 +84,7 @@ class extends_cheque(osv.Model):
 
 
 # Add a new floats fields object res.partner
-class res_partner_add_fields(osv.Model):
+class res_partner(osv.Model):
     # This OpenERP object inherits from res.partner
     # to add a new textual field
     _inherit = 'res.partner'
@@ -107,7 +105,7 @@ class descuento_de_cheques(osv.Model):
         'fecha_liquidacion': fields.date('Fecha liquidacion', required=True),
         'active': fields.boolean('Activa', help="Cancelar liquidacion luego de validarla"),
         'cliente_id': fields.many2one('res.partner', 'Cliente'),
-        'cheques_ids': fields.one2many('extends.cheque', 'liquidacion_id', 'Cheques', ondelete='cascade'),
+        'cheques_ids': fields.one2many('cheques.de.terceros', 'liquidacion_id', 'Cheques', ondelete='cascade'),
 
 
         'name': fields.char("Numero del cheque", size=8),

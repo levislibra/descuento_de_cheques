@@ -4,31 +4,34 @@
 
       <!-- extends_cheque - Formularios de creacion  -->
 
-        <record id="extends_cheque_tree" model="ir.ui.view">
-            <field name="name">Extends cheque Tree</field>
-            <field name="model">extends.cheque</field>
+        <record id="inherit_cheque_tree" model="ir.ui.view">
+            <field name="name">extends cheque tree</field>
+            <field name="model">cheques.de.terceros</field>
+            <field name="inherit_id" ref="cheques_de_terceros.cheque_tree"/>
             <field name="arch" type="xml">
-                <tree string="Cheques" editable="bottom">
+                <!--<tree string="Cheques" editable="bottom">
                     <field name="name"/>
                     <field name="firmante_id"/>
                     <field name="banco_id"/>
-                    <field name="importe"  widget='monetary'/>
-                    <field name="fecha_vencimiento"/>
-                    <field name="fecha_acreditacion_descuento"/>
-                    <field name="dias_descuento"/>
+                    <field name="importe"/>
+                    <field name="fecha_vencimiento"/> -->
+                    <field name="fecha_vencimiento" position="after">
+                        <field name="fecha_acreditacion_descuento"/>
+                    </field>
+                    <!--<field name="dias_descuento"/>
                     <field name="tasa_fija_descuento"/>
                     <field name="monto_fijo_descuento" widget='monetary'/>
                     <field name="tasa_mensual_descuento"/>
                     <field name="monto_mensual_descuento"/>
                     <field name="monto_neto_descuento"/>
-                </tree>
+                </tree>-->
             </field>
         </record>
 
 
         <record id="extends_cheque_form" model="ir.ui.view">
             <field name="name">Extends Cheque Form</field>
-            <field name="model">extends.cheque</field>
+            <field name="model">cheques.de.terceros</field>
             <field name="arch" type="xml">
                 <form string="Formulario de cheque" editable="bottom">
                     <header>
@@ -83,9 +86,28 @@
                         <field name="id"/>
                         <field name="fecha_liquidacion"/>
                         <field name="cliente_id"/>
-                        <field name="active"/>
-                        <field name="cheques_ids"/>
+                        <field name="active"/>  
                     </group>
+                    <notebook>
+                        <page string="Cheques">
+                            <field name="cheques_ids">
+                                <tree string="Cheques" editable="bottom">
+                                    <field name="name"/>
+                                    <field name="firmante_id"/>
+                                    <field name="banco_id"/>
+                                    <field name="importe"/>
+                                    <field name="fecha_vencimiento"/>
+                                    <field name="fecha_acreditacion_descuento"/>
+                                    <field name="dias_descuento"/>
+                                    <field name="tasa_fija_descuento"/>
+                                    <field name="monto_fijo_descuento"/>
+                                    <field name="tasa_mensual_descuento"/>
+                                    <field name="monto_mensual_descuento"/>
+                                    <field name="monto_neto_descuento"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
