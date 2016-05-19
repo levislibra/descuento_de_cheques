@@ -39,17 +39,17 @@ class cheques_de_terceros(osv.Model):
     _name = 'cheques.de.terceros'
     _description = 'opciones extras de cheques para calculo del descuento'
 
-
     _columns = {
         'liquidacion_id': fields.many2one('descuento.de.cheques', 'Liquidacion id'),
-		'tasa_fija_descuento': fields.float('% Fija'),
+		'tasa_fija_descuento': fields.float('% Fija', compute="_calcular_descuento_tasas"),
 		'monto_fijo_descuento': fields.float(string='Gasto', compute='_calcular_descuento_fijo', readonly=True, store=True),
-        'tasa_mensual_descuento': fields.float('% Mensual'),
+        'tasa_mensual_descuento': fields.float('% Mensual', compute="_calcular_descuento_tasas"),
         'monto_mensual_descuento': fields.float(string='Interes', compute='_calcular_descuento_mensual', readonly=True, store=True),
         'fecha_acreditacion_descuento': fields.date('Acreditacion'),
         'monto_neto_descuento': fields.float(string='Neto', compute='_calcular_descuento_neto', readonly=True, store=True),
         'dias_descuento': fields.integer(string='Dias', compute='_calcular_descuento_dias', readonly=True, store=True),
     }
+
     @api.one
     @api.depends('importe', 'tasa_fija_descuento')
     def _calcular_descuento_fijo(self):
@@ -77,6 +77,13 @@ class cheques_de_terceros(osv.Model):
 	    			self.dias_descuento = 0
 
     @api.one
+    @api.depends('name')
+    def _calcular_descuento_tasas(self):
+        if self.liquidacion_id is not None and self.liquidacion_id.cliente_id is not None:
+            self.tasa_fija_descuento = self.liquidacion_id.cliente_id.tasa_fija_recomendada
+            self.tasa_mensual_descuento = self.liquidacion_id.cliente_id.tasa_mensual_recomendada
+
+    @api.one
     @api.depends('monto_fijo_descuento', 'monto_mensual_descuento')
     def _calcular_descuento_neto(self):
     	self.monto_neto_descuento = self.importe - self.monto_fijo_descuento - self.monto_mensual_descuento
@@ -102,20 +109,39 @@ class descuento_de_cheques(osv.Model):
     _rec_name = 'id'
     _columns =  {
         'id': fields.integer('Nro liquidacion'),
-        'fecha_liquidacion': fields.date('Fecha liquidacion', required=True),
-        'active': fields.boolean('Activa', help="Cancelar liquidacion luego de validarla"),
+        'fecha_liquidacion': fields.date('Fecha', required=True),
+        'active': fields.boolean('Activa'),
         'cliente_id': fields.many2one('res.partner', 'Cliente'),
         'cheques_ids': fields.one2many('cheques.de.terceros', 'liquidacion_id', 'Cheques', ondelete='cascade'),
+        'state': fields.selection([('cotizacion', 'Cotizacion'), ('confirmada', 'Confirmada'), ('cancelada', 'Cancelada')], string='Status', readonly=True, track_visibility='onchange'),
 
-
-        'name': fields.char("Numero del cheque", size=8),
-        'state': fields.selection([('cotizacion', 'Cotizacion'), ('confirmada', 'Confirmada')], string='Status', readonly=True, track_visibility='onchange'),
+        'bruto_liquidacion': fields.float(string='Bruto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
+        'gasto_liquidacion': fields.float(string='Gasto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
+        'interes_liquidacion': fields.float(string='Interes', compute='_calcular_montos_liquidacion', readonly=True, store=True),
+        'gasto_interes_liquidacion': fields.float(string='Gasto + Interes', compute='_calcular_montos_liquidacion', readonly=True, store=True),
+        'neto_liquidacion': fields.float(string='Neto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
     }
+    @api.one
+    @api.depends('cheques_ids')
+    def _calcular_montos_liquidacion(self):
+        self.bruto_liquidacion = 0
+        self.gasto_liquidacion = 0
+        self.interes_liquidacion = 0
+        self.gasto_interes_liquidacion = 0
+        self.neto_liquidacion = 0
+        for cheque in self.cheques_ids:
+            self.bruto_liquidacion += cheque.importe
+            self.gasto_liquidacion += cheque.monto_fijo_descuento
+            self.interes_liquidacion += cheque.monto_mensual_descuento
+            self.gasto_interes_liquidacion += cheque.monto_fijo_descuento + cheque.monto_mensual_descuento
+            self.neto_liquidacion += cheque.monto_neto_descuento
+
+
+
     _defaults = {
 		'fecha_liquidacion': lambda *a: time.strftime('%Y-%m-%d'),
     	'state': 'cotizacion',
     	'active': True,
-
     }
     _sql_constraints = [
             ('id_uniq', 'unique (id)', "El Nro de liquidacion ya existe!"),

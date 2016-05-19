@@ -2,64 +2,24 @@
 <openerp>
     <data>
 
-      <!-- extends_cheque - Formularios de creacion  -->
+    <!-- Herencia partner - agregamos campos  -->
 
-        <record id="inherit_cheque_tree" model="ir.ui.view">
-            <field name="name">extends cheque tree</field>
-            <field name="model">cheques.de.terceros</field>
-            <field name="inherit_id" ref="cheques_de_terceros.cheque_tree"/>
-            <field name="arch" type="xml">
-                <!--<tree string="Cheques" editable="bottom">
-                    <field name="name"/>
-                    <field name="firmante_id"/>
-                    <field name="banco_id"/>
-                    <field name="importe"/>
-                    <field name="fecha_vencimiento"/> -->
-                    <field name="fecha_vencimiento" position="after">
-                        <field name="fecha_acreditacion_descuento"/>
-                    </field>
-                    <!--<field name="dias_descuento"/>
-                    <field name="tasa_fija_descuento"/>
-                    <field name="monto_fijo_descuento" widget='monetary'/>
-                    <field name="tasa_mensual_descuento"/>
-                    <field name="monto_mensual_descuento"/>
-                    <field name="monto_neto_descuento"/>
-                </tree>-->
+    <record id="inherit_res_partner" model="ir.ui.view">
+        <field name="name">Herencia res.partner</field>
+        <field name="model">res.partner</field>
+        <field name="type">form</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <field name="website" position="after" >
+                <field name="tasa_fija_recomendada"/>
+                <field name="tasa_mensual_recomendada"/>
             </field>
-        </record>
+        </field>
+    </record>
 
+    <!-- Liquidacions - Formularios de creacion  -->
 
-        <record id="extends_cheque_form" model="ir.ui.view">
-            <field name="name">Extends Cheque Form</field>
-            <field name="model">cheques.de.terceros</field>
-            <field name="arch" type="xml">
-                <form string="Formulario de cheque" editable="bottom">
-                    <header>
-                        <field name="state" widget="statusbar"/>
-                    </header>
-                    <sheet>
-                        <group>
-                            <field name="firmante_id"/>
-                            <field name="banco_id"/>
-                            <field name="name"/>
-                            <field name="importe" widget="monetary"/>
-                            <field name="fecha_vencimiento"/>
-                            <field name="fecha_acreditacion_descuento"/>
-                            <field name="tasa_fija_descuento"/>
-                            <field name="tasa_mensual_descuento"/>
-                            <!--<field name="monto_fijo_descuento"/>-->
-                        </group>
-                        <group>
-                            
-                        </group>
-                    </sheet>
-                </form>
-            </field>
-        </record>
-
-      <!-- Liquidacions - Formularios de creacion  -->
-
-        <record id="descuento_de_cheques_tree" model="ir.ui.view">
+    <record id="descuento_de_cheques_tree" model="ir.ui.view">
         <field name="name">Descuento de cheques Tree</field>
         <field name="model">descuento.de.cheques</field>
         <field name="arch" type="xml">
@@ -67,6 +27,9 @@
                 <field name="id"/>
                 <field name="fecha_liquidacion"/>
                 <field name="cliente_id"/>
+                <field name="bruto_liquidacion" sum="Total"/>
+                <field name="gasto_interes_liquidacion" sum="Total"/>
+                <field name="neto_liquidacion" sum="Total"/>
                 <field name="active"/>
                 <field name="state"/>
             </tree>
@@ -95,15 +58,15 @@
                                     <field name="name"/>
                                     <field name="firmante_id"/>
                                     <field name="banco_id"/>
-                                    <field name="importe"/>
+                                    <field name="importe" sum="Total"/>
                                     <field name="fecha_vencimiento"/>
                                     <field name="fecha_acreditacion_descuento"/>
                                     <field name="dias_descuento"/>
                                     <field name="tasa_fija_descuento"/>
-                                    <field name="monto_fijo_descuento"/>
+                                    <field name="monto_fijo_descuento" sum="Total"/>
                                     <field name="tasa_mensual_descuento"/>
-                                    <field name="monto_mensual_descuento"/>
-                                    <field name="monto_neto_descuento"/>
+                                    <field name="monto_mensual_descuento" sum="Total"/>
+                                    <field name="monto_neto_descuento" sum="Total"/>
                                 </tree>
                             </field>
                         </page>
