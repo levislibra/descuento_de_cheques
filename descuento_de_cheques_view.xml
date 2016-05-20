@@ -76,7 +76,7 @@
         </field>
     </record>
 
-    <record id="action_descuento_de_cheques" model="ir.actions.act_window">
+    <record id="liquidaciones_action" model="ir.actions.act_window">
         <field name="name">Liqudiaciones</field>
         <field name="res_model">descuento.de.cheques</field>
         <field name="view_mode">tree,form</field>
@@ -84,12 +84,42 @@
     </record>
 
 
-    <!-- Menu Principal del modulo (barra superior) - Liquidacion -->
-    <menuitem id="menu_descuento_de_cheques" name="Liquidaciones" />
+    <!-- Menu Principal del modulo (barra superior) - Financiera -->
+    <menuitem id="menu_financiera" name="Financiera" />
     
-    <!-- SubMenu Liquidaciones Lista -->
-    <menuitem id="menu_descuento_de_cheques_lista" name="Liquidaciones" parent="menu_descuento_de_cheques"  sequence="0" />
-    <menuitem id="submenu_menu_descuento_de_cheques_action" name="Listar" parent="menu_descuento_de_cheques_lista" action="action_descuento_de_cheques"  sequence="0" />
+    <!-- SubMenu 1 - Liquidaciones -->
+    <menuitem id="smenu_liquidaciones" name="Liquidaciones" parent="menu_financiera"  sequence="0" />
+    <menuitem id="smenu_liquidaciones_action" name="Liquidaciones" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_liquidaciones_configuracion_action" name="Configuracion" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
+
+    <!-- SubMenu 2 - Clientes -->
+    <menuitem id="smenu_clientes" name="Clientes" parent="menu_financiera"  sequence="0" />
+    <menuitem id="smenu_clientes_action" name="Clientes" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_clientes_intereses_action" name="Calcular intereses" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_clientes_efectivo_action" name="Efectivo al cliente" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_clientes_pago_action" name="Pago del cliente" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_clientes_configuracion_action" name="Configuracion" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
+
+    <!-- SubMenu 3 - Proveedores -->
+    <menuitem id="smenu_proveedores" name="Proveedores" parent="menu_financiera"  sequence="0" />
+    <menuitem id="smenu_proveedores_action" name="Proveedores" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_proveedores_intereses_action" name="Calcular intereses" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_proveedores_pago_action" name="Pago a proveedor" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_proveedores_captarfondos_action" name="Captar fondos" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+
+    <menuitem id="smenu_proveedores_configuracion_action" name="Configuracion" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+
+    <!-- SubMenu 3 - Prestamos Personales -->
+    <menuitem id="smenu_prestamos" name="Prestamos" parent="menu_financiera"  sequence="0" />
+    <menuitem id="smenu_prestamos_action" name="Prestamos" parent="smenu_prestamos" action="liquidaciones_action"  sequence="0" />
 
     </data>
 </openerp>
