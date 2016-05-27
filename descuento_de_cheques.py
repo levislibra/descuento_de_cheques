@@ -28,8 +28,14 @@ from openerp.tools.translate import _
 from openerp.http import request
 from operator import itemgetter
 from openerp.exceptions import UserError
+from openerp.exceptions import ValidationError
+import logging
+from openerp.osv import orm
 
 import openerp.addons.cheques_de_terceros
+_logger = logging.getLogger(__name__)
+#       _logger.error("date now : %r", date_now)
+
 
 # Add a new floats fields and date object cheques.de.terceros
 class cheques_de_terceros(osv.Model):
@@ -45,7 +51,7 @@ class cheques_de_terceros(osv.Model):
 		'monto_fijo_descuento': fields.float(string='Gasto', compute='_calcular_descuento_fijo', readonly=True, store=True),
         'tasa_mensual_descuento': fields.float('% Mensual', compute="_calcular_descuento_tasas"),
         'monto_mensual_descuento': fields.float(string='Interes', compute='_calcular_descuento_mensual', readonly=True, store=True),
-        'fecha_acreditacion_descuento': fields.date('Acreditacion'),
+        'fecha_acreditacion_descuento': fields.date('Acreditacion', compute='_calcular_fecha_acreditacion'),
         'monto_neto_descuento': fields.float(string='Neto', compute='_calcular_descuento_neto', readonly=True, store=True),
         'dias_descuento': fields.integer(string='Dias', compute='_calcular_descuento_dias', readonly=True, store=True),
     }
@@ -76,12 +82,19 @@ class cheques_de_terceros(osv.Model):
 	    		else:
 	    			self.dias_descuento = 0
 
+    #Ojo -- actualizar bien esta funcion.
     @api.one
     @api.depends('name')
     def _calcular_descuento_tasas(self):
         if self.liquidacion_id is not None and self.liquidacion_id.cliente_id is not None:
             self.tasa_fija_descuento = self.liquidacion_id.cliente_id.tasa_fija_recomendada
             self.tasa_mensual_descuento = self.liquidacion_id.cliente_id.tasa_mensual_recomendada
+
+    @api.one
+    @api.depends('fecha_vencimiento')
+    def _calcular_fecha_acreditacion(self):
+        self.fecha_acreditacion_descuento = self.fecha_vencimiento
+
 
     @api.one
     @api.depends('monto_fijo_descuento', 'monto_mensual_descuento')
@@ -95,7 +108,6 @@ class res_partner(osv.Model):
     # This OpenERP object inherits from res.partner
     # to add a new textual field
     _inherit = 'res.partner'
-    #'res.partner'
 
     _columns = {
         'tasa_fija_recomendada' : fields.float('Tasa Fija Recomendada'),
@@ -111,16 +123,35 @@ class descuento_de_cheques(osv.Model):
         'id': fields.integer('Nro liquidacion'),
         'fecha_liquidacion': fields.date('Fecha', required=True),
         'active': fields.boolean('Activa'),
-        'cliente_id': fields.many2one('res.partner', 'Cliente'),
+        'cliente_id': fields.many2one('res.partner', 'Cliente', required=True),
+        'cliente_subcuenta_id': fields.many2one('subcuenta', 'Subcuenta' , required=True),
         'cheques_ids': fields.one2many('cheques.de.terceros', 'liquidacion_id', 'Cheques', ondelete='cascade'),
         'state': fields.selection([('cotizacion', 'Cotizacion'), ('confirmada', 'Confirmada'), ('cancelada', 'Cancelada')], string='Status', readonly=True, track_visibility='onchange'),
 
+        'cliente_id_subcuenta_ids':fields.one2many('subcuenta', 'subcuenta_id', 'Subcuentas', compute="_calcular_cliente_subcuenta_ids", readonly=True),
         'bruto_liquidacion': fields.float(string='Bruto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
         'gasto_liquidacion': fields.float(string='Gasto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
         'interes_liquidacion': fields.float(string='Interes', compute='_calcular_montos_liquidacion', readonly=True, store=True),
         'gasto_interes_liquidacion': fields.float(string='Gasto + Interes', compute='_calcular_montos_liquidacion', readonly=True, store=True),
         'neto_liquidacion': fields.float(string='Neto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
     }
+
+    @api.one
+    @api.constrains('cliente_subcuenta_id')
+    def _check_description(self):
+        _logger.error("control 1 : %r", self.cliente_subcuenta_id.subcuenta_id.id)
+        _logger.error("control_ 2 : %r", self.cliente_id.id)
+        if self.cliente_subcuenta_id.subcuenta_id.id != self.cliente_id.id:
+            raise ValidationError("La subcuenta no pertenece al cliente")
+
+    @api.onchange('cliente_id', 'cliente_subcuenta_id')
+    def _calcular_cliente_subcuenta_ids(self):
+        _logger.error("################################")
+        if self.cliente_id:
+            self.cliente_subcuenta_id = False
+            self.cliente_id_subcuenta_ids = self.cliente_id.subcuenta_ids
+
+
     @api.one
     @api.depends('cheques_ids')
     def _calcular_montos_liquidacion(self):
@@ -136,7 +167,14 @@ class descuento_de_cheques(osv.Model):
             self.gasto_interes_liquidacion += cheque.monto_fijo_descuento + cheque.monto_mensual_descuento
             self.neto_liquidacion += cheque.monto_neto_descuento
 
+    def confirmar(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state':'confirmada'}, context=None)
+        return True
 
+    def cancelar(self, cr, uid, ids, context=None):
+        self.write(cr, uid, ids, {'state':'cancelada'}, context=None)
+        return True
+    
 
     _defaults = {
 		'fecha_liquidacion': lambda *a: time.strftime('%Y-%m-%d'),

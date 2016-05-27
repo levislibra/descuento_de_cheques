@@ -1,125 +1,48 @@
 <?xml version="1.0"?>
 <openerp>
     <data>
+        <!-- Herencia partner - agregamos campos  -->
 
-    <!-- Herencia partner - agregamos campos  -->
-
-    <record id="inherit_res_partner" model="ir.ui.view">
-        <field name="name">Herencia res.partner</field>
+    <record id="inherit_res_partner_subcuentas" model="ir.ui.view">
+        <field name="name">Subcuentas res.partner</field>
         <field name="model">res.partner</field>
         <field name="type">form</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <field name="website" position="after" >
-                <field name="tasa_fija_recomendada"/>
-                <field name="tasa_mensual_recomendada"/>
-            </field>
+            <!--<page name="sales_purchases" position="after" >-->
+            <xpath expr="//page[@name='internal_notes']" position='after'>
+                <page name="subcuentas" string="Subcuentas">
+                    <field name="subcuenta_ids">
+                        <tree string="Subcuentas" editable="bottom" >
+                            <field name="name"/>
+                            <field name="cuenta_corriente"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+            <!--</page>-->
         </field>
     </record>
 
-    <!-- Liquidacions - Formularios de creacion  -->
-
-    <record id="descuento_de_cheques_tree" model="ir.ui.view">
-        <field name="name">Descuento de cheques Tree</field>
-        <field name="model">descuento.de.cheques</field>
+    <!-- Crear Subcuenta  -->
+    <record id="subcuenta_form" model="ir.ui.view">
+        <field name="name">Subcuenta</field>
+        <field name="model">subcuenta</field>
         <field name="arch" type="xml">
-            <tree string="Lista de liquidaciones">
-                <field name="id"/>
-                <field name="fecha_liquidacion"/>
-                <field name="cliente_id"/>
-                <field name="bruto_liquidacion" sum="Total"/>
-                <field name="gasto_interes_liquidacion" sum="Total"/>
-                <field name="neto_liquidacion" sum="Total"/>
-                <field name="active"/>
-                <field name="state"/>
-            </tree>
-        </field>
-    </record>
-
-    <record id="descuento_de_cheques_form" model="ir.ui.view">
-        <field name="name">Descuento de cheques Form</field>
-        <field name="model">descuento.de.cheques</field>
-        <field name="arch" type="xml">
-            <form string="Formulario de liquidacion" editable="bottom">
+            <form string="Subcuenta" editable="bottom">
                 <header>
-               		<field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
-                        <field name="id"/>
-                        <field name="fecha_liquidacion"/>
-                        <field name="cliente_id"/>
-                        <field name="active"/>  
+                        <field name="name"/>
+                        <field name="subcuenta_id"/>
+                        <field name="cuenta_corriente"/>
                     </group>
-                    <notebook>
-                        <page string="Cheques">
-                            <field name="cheques_ids">
-                                <tree string="Cheques" editable="bottom">
-                                    <field name="name"/>
-                                    <field name="firmante_id"/>
-                                    <field name="banco_id"/>
-                                    <field name="importe" sum="Total"/>
-                                    <field name="fecha_vencimiento"/>
-                                    <field name="fecha_acreditacion_descuento"/>
-                                    <field name="dias_descuento"/>
-                                    <field name="tasa_fija_descuento"/>
-                                    <field name="monto_fijo_descuento" sum="Total"/>
-                                    <field name="tasa_mensual_descuento"/>
-                                    <field name="monto_mensual_descuento" sum="Total"/>
-                                    <field name="monto_neto_descuento" sum="Total"/>
-                                </tree>
-                            </field>
-                        </page>
-                    </notebook>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <record id="liquidaciones_action" model="ir.actions.act_window">
-        <field name="name">Liqudiaciones</field>
-        <field name="res_model">descuento.de.cheques</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="descuento_de_cheques_tree"/>
-    </record>
-
-
-    <!-- Menu Principal del modulo (barra superior) - Financiera -->
-    <menuitem id="menu_financiera" name="Financiera" />
-    
-    <!-- SubMenu 1 - Liquidaciones -->
-    <menuitem id="smenu_liquidaciones" name="Liquidaciones" parent="menu_financiera"  sequence="0" />
-    <menuitem id="smenu_liquidaciones_action" name="Liquidaciones" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_liquidaciones_configuracion_action" name="Configuracion" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
-
-    <!-- SubMenu 2 - Clientes -->
-    <menuitem id="smenu_clientes" name="Clientes" parent="menu_financiera"  sequence="0" />
-    <menuitem id="smenu_clientes_action" name="Clientes" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_intereses_action" name="Calcular intereses" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_efectivo_action" name="Efectivo al cliente" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_pago_action" name="Pago del cliente" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_configuracion_action" name="Configuracion" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <!-- SubMenu 3 - Proveedores -->
-    <menuitem id="smenu_proveedores" name="Proveedores" parent="menu_financiera"  sequence="0" />
-    <menuitem id="smenu_proveedores_action" name="Proveedores" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_proveedores_intereses_action" name="Calcular intereses" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_proveedores_pago_action" name="Pago a proveedor" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_proveedores_captarfondos_action" name="Captar fondos" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_proveedores_configuracion_action" name="Configuracion" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <!-- SubMenu 3 - Prestamos Personales -->
-    <menuitem id="smenu_prestamos" name="Prestamos" parent="menu_financiera"  sequence="0" />
-    <menuitem id="smenu_prestamos_action" name="Prestamos" parent="smenu_prestamos" action="liquidaciones_action"  sequence="0" />
 
     </data>
 </openerp>

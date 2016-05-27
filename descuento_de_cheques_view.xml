@@ -42,31 +42,43 @@
         <field name="arch" type="xml">
             <form string="Formulario de liquidacion" editable="bottom">
                 <header>
+                    <button name="confirmar" string="Confirmar" states="cotizacion" type="object" />
+                    <button name="cancelar" string="Cancelar" states="cotizacion,confirmada" type="object" />
                		<field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
-                        <field name="id"/>
-                        <field name="fecha_liquidacion"/>
-                        <field name="cliente_id"/>
-                        <field name="active"/>  
+                        <field name="id" context="{'id': id}"/>
+                        <field name="fecha_liquidacion" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
+                        <field name="cliente_id" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
+                        <field name="cliente_subcuenta_id" domain="[('subcuenta_id.id','=', cliente_id)]" attrs="{'readonly': [('state', '!=', 'cotizacion')]}" on_change="cliente_id"/>
+                        <field name="active" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>  
                     </group>
                     <notebook>
                         <page string="Cheques">
-                            <field name="cheques_ids">
-                                <tree string="Cheques" editable="bottom">
+                            <field name="cheques_ids" attrs="{'readonly': [('state', '!=', 'cotizacion')]}">
+                                <tree string="Cheques" editable="bottom" >
+                                    <field name="state"/>
                                     <field name="name"/>
                                     <field name="firmante_id"/>
                                     <field name="banco_id"/>
                                     <field name="importe" sum="Total"/>
                                     <field name="fecha_vencimiento"/>
                                     <field name="fecha_acreditacion_descuento"/>
-                                    <field name="dias_descuento"/>
+                                    <field name="dias_descuento" attrs="{'readonly': [('state', 'in', ('draft', 'en_cartera', 'depositado', 'enpago', 'rechazado'))]}"/>
                                     <field name="tasa_fija_descuento"/>
-                                    <field name="monto_fijo_descuento" sum="Total"/>
+                                    <field name="monto_fijo_descuento" sum="Total" attrs="{'readonly': [('state', 'in', ('draft', 'en_cartera', 'depositado', 'enpago', 'rechazado'))]}"/>
                                     <field name="tasa_mensual_descuento"/>
-                                    <field name="monto_mensual_descuento" sum="Total"/>
-                                    <field name="monto_neto_descuento" sum="Total"/>
+                                    <field name="monto_mensual_descuento" sum="Total" attrs="{'readonly': [('state', 'in', ('draft', 'en_cartera', 'depositado', 'enpago', 'rechazado'))]}"/>
+                                    <field name="monto_neto_descuento" sum="Total" attrs="{'readonly': [('state', 'in', ('draft', 'en_cartera', 'depositado', 'enpago', 'rechazado'))]}"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="subcuentas">
+                            <field name="cliente_id_subcuenta_ids" on_change="cliente_id,cliente_subcuenta_id">
+                                <tree string="Subcuentas">
+                                    <field name="name"/>
+                                    <field name="cuenta_corriente"/>
                                 </tree>
                             </field>
                         </page>
