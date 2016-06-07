@@ -2,18 +2,27 @@
 <openerp>
     <data>
 
-    <!-- Herencia partner - agregamos campos  -->
-
-    <record id="inherit_res_partner" model="ir.ui.view">
-        <field name="name">Herencia res.partner</field>
-        <field name="model">res.partner</field>
+    <record id="inherit_account_journal" model="ir.ui.view">
+        <field name="name">Inherits account.journal</field>
+        <field name="model">account.journal</field>
         <field name="type">form</field>
-        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
         <field name="arch" type="xml">
-            <field name="website" position="after" >
-                <field name="tasa_fija_recomendada"/>
-                <field name="tasa_mensual_recomendada"/>
-            </field>
+            <xpath expr="//page[@name='advanced_settings']" position='after'>
+                <page name="financiera" string="Financiera" attrs="{'invisible': [('type', '!=', 'sale')]}">
+                    <form name="financiera">
+                        <header>
+                        </header>
+                        <sheet>
+                            <group>
+                                <field name="cuenta_cheques_id"/>
+                                <field name="cuenta_ganancia_id"/>
+                                <field name="cuenta_caja_id"/>
+                            </group>
+                        </sheet>
+                    </form>
+                </page>
+            </xpath>
         </field>
     </record>
 
@@ -43,16 +52,32 @@
             <form string="Formulario de liquidacion" editable="bottom">
                 <header>
                     <button name="confirmar" string="Confirmar" states="cotizacion" type="object" />
-                    <button name="cancelar" string="Cancelar" states="cotizacion,confirmada" type="object" />
+                    <button name="pagar" string="Pagar y Registrar" states="confirmada" type="object" />
+                    <button name="editar" string="Cotizar" states="confirmada" type="object" />
+                    <button name="cancelar" string="Cancelar" states="cotizacion,confirmada,pagado" type="object" />
                		<field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
-                        <field name="id" context="{'id': id}"/>
-                        <field name="fecha_liquidacion" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
+                        <field name="id"/>
+                        <field name="fecha_liquidacion" attrs="{'readonly': [('state', '!=', 'cotizacion')]}" context="{'fecha_liquidacion': fecha_liquidacion}"/>
                         <field name="cliente_id" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
-                        <field name="cliente_subcuenta_id" domain="[('subcuenta_id.id','=', cliente_id)]" attrs="{'readonly': [('state', '!=', 'cotizacion')]}" on_change="cliente_id"/>
-                        <field name="active" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>  
+                        <field name="subcuenta_id" domain="[('subcuenta_id.id','=', cliente_id)]" attrs="{'readonly': [('state', '!=', 'cotizacion')]}">
+                            <form string="Subcuenta" editable="bottom">
+                                <header>
+                                </header>
+                                <sheet>
+                                    <group>
+                                        <field name="name"/>
+                                    </group>
+                                </sheet>
+                            </form>
+                        </field>
+                        <field name="journal_id" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
+                        <field name="move_id"/>
+                        <field name="invoice_id"/>
+                        <field name="efectivo_al_cliente" attrs="{'readonly': [('state', '!=', 'cotizacion')], 
+                        'required': [('state', '=', 'cotizacion')]}"/>
                     </group>
                     <notebook>
                         <page string="Cheques">
@@ -75,10 +100,10 @@
                             </field>
                         </page>
                         <page string="subcuentas">
-                            <field name="cliente_id_subcuenta_ids" on_change="cliente_id,cliente_subcuenta_id">
+                            <field name="cliente_subcuenta_ids">
                                 <tree string="Subcuentas">
                                     <field name="name"/>
-                                    <field name="cuenta_corriente"/>
+                                    <field name="saldo"/>
                                 </tree>
                             </field>
                         </page>

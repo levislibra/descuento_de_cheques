@@ -9,18 +9,24 @@
         <field name="type">form</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <!--<page name="sales_purchases" position="after" >-->
+            <xpath expr="//button[@name='toggle_active']" position='after'>
+                <button name="ver_subcuentas" type="object" class="oe_stat_button" icon="fa-archive" string="Subcuentas"  widget="boolean_button" options="{&quot;terminology&quot;: &quot;archive&quot;}"/>
+            </xpath>
             <xpath expr="//page[@name='internal_notes']" position='after'>
                 <page name="subcuentas" string="Subcuentas">
                     <field name="subcuenta_ids">
                         <tree string="Subcuentas" editable="bottom" >
                             <field name="name"/>
-                            <field name="cuenta_corriente"/>
+                            <field name="saldo" sum="Total"/>
+                            <field name="descuento_de_cheques"/>
+                            <field name="prestamos"/>
+                            <field name="tasa_fija_descuento"/>
+                            <field name="tasa_mensual_descuento"/>
+                            <field name="tasa_descubierto"/>
                         </tree>
                     </field>
                 </page>
             </xpath>
-            <!--</page>-->
         </field>
     </record>
 
@@ -31,17 +37,60 @@
         <field name="arch" type="xml">
             <form string="Subcuenta" editable="bottom">
                 <header>
+                    <button name="_calcular_intereses" string="Caclular intereses" type="object" />
                 </header>
                 <sheet>
                     <group>
                         <field name="name"/>
-                        <field name="subcuenta_id"/>
-                        <field name="cuenta_corriente"/>
+                        <field name="active"/>
+                        <field name="subcuenta_id" attrs="{'required': [('active', '=', True)]}"/>
+                        <field name="journal_id"/>
+                        <field name="descuento_de_cheques"/>
+                        <field name="prestamos"/>
+                        <field name="tasa_fija_descuento"/>
+                        <field name="tasa_mensual_descuento"/>
+                        <field name="tasa_descubierto"/>
                     </group>
+                    <notebook>
+                        <page name="Movimientos" string="Movimientos">
+                            <button name="algo" string="click" type="object" />
+                            <button name="algo2" string="click2" type="object" />
+                            <field name="apuntes_ids" attrs="{'readonly': [('active', '=', True)]}">
+                                <tree name="movimientos">
+                                    <field name="date"/>
+                                    <field name="name"/>
+                                    <field name="debit" sum="Total"/>
+                                    <field name="credit" sum="Total"/>
+                                    <field name="saldo_acumulado"/>
+                                    <field name="move_id"/>
+                                    <field name="journal_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
     </record>
+
+    <!-- Crear Subcuenta  -->
+    <record id="subcuenta_tree" model="ir.ui.view">
+        <field name="name">Subcuenta</field>
+        <field name="model">subcuenta</field>
+        <field name="arch" type="xml">
+            <tree string="Subcuenta" editable="bottom">
+                <field name="name"/>
+                <field name="subcuenta_id" attrs="{'required': [('active', '=', True)]}"/>
+                <field name="journal_id"/>
+                <field name="descuento_de_cheques"/>
+                <field name="prestamos"/>
+                <field name="tasa_fija_descuento"/>
+                <field name="tasa_mensual_descuento"/>
+                <field name="tasa_descubierto"/>
+            </tree>
+        </field>
+    </record>
+
 
 
     </data>
