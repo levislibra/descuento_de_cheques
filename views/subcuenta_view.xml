@@ -1,6 +1,52 @@
 <?xml version="1.0"?>
 <openerp>
     <data>
+
+    <!-- formulario Intereses - Formulario de creacion -->
+
+    <record id="formulario_intereses_tree" model="ir.ui.view">
+        <field name="name">Formulario Intereses Tree</field>
+        <field name="model">formulario.interes</field>
+        <field name="arch" type="xml">
+            <tree string="Formularios Intereses">
+                <field name="tipo"/>
+                <field name="tasa_interes"/>
+                <field name="fecha_hasta"/>
+                <button name="generar_intereses" states="pendiente" string="Generar Intereses" type="object"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="formulario_intereses_form" model="ir.ui.view">
+        <field name="name">Formulario Intereses Form</field>
+        <field name="model">formulario.interes</field>
+        <field name="arch" type="xml">
+            <form string="Formulario de intereses" editable="bottom">
+                <header>
+                    <field name="state"  widget="statusbar"/>
+                    <button name="generar_intereses_confirmar" states="borrador" string="Confirmar intereses" type="object"/>
+                    <button name="generar_intereses_cancelar" states="borrador,confirmado,cancelado" string="Cancelar intereses" type="object"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="tipo" attrs="{'readonly': [('state', '=', 'borrador'), ('state', '=', 'confimado'), ('state', '=', 'cancelado')]}"/>
+                        <field name="tasa_interes" attrs="{'readonly': [('state', '=', 'borrador'), ('state', '=', 'confimado'), ('state', '=', 'cancelado')]}"/>
+                        <field name="fecha_hasta" attrs="{'readonly': [('state', '=', 'borrador'), ('state', '=', 'confimado'), ('state', '=', 'cancelado')]}"/>
+                    </group>
+                    <notebook>
+                        <page name="intereses" string="Asintos Generados">
+                            <field name="asientos_ids"/>
+                        </page>
+                        <page name="apuntes_calculados" string="Apuntes calculados">
+                            <field name="apuntes_calculados_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
         <!-- Herencia partner - agregamos campos  -->
 
     <record id="inherit_res_partner_subcuentas" model="ir.ui.view">
@@ -37,7 +83,6 @@
         <field name="arch" type="xml">
             <form string="Subcuenta" editable="bottom">
                 <header>
-                    <button name="_calcular_intereses" string="Caclular intereses" type="object" />
                 </header>
                 <sheet>
                     <group>
@@ -53,8 +98,7 @@
                     </group>
                     <notebook>
                         <page name="Movimientos" string="Movimientos">
-                            <button name="algo" string="click" type="object" />
-                            <button name="algo2" string="click2" type="object" />
+                            <button name="button_actualizar_saldo_acumulado" string="Actualizar Cuenta" type="object" />
                             <field name="apuntes_ids" attrs="{'readonly': [('active', '=', True)]}">
                                 <tree name="movimientos">
                                     <field name="date"/>
@@ -64,8 +108,13 @@
                                     <field name="saldo_acumulado"/>
                                     <field name="move_id"/>
                                     <field name="journal_id"/>
+                                    <field name="interes_generado"/>
                                 </tree>
                             </field>
+                        </page>
+                        <page name="intereses" string="Intereses Generados">
+                            <button name="algo" string="Setear a False" type="object" />
+                            <field name="formulario_interes_ids"/>
                         </page>
                     </notebook>
                 </sheet>

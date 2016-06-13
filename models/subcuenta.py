@@ -48,10 +48,22 @@ class account_move_line(osv.Model):
         'subcuenta_id': fields.many2one('subcuenta', 'Subcuenta'),
         'interes_generado': fields.boolean('Interes Generado'),
         'saldo_acumulado': fields.float('Saldo Acumulado'),
+        'formulario_interes_id': fields.many2one('formulario.interes', 'Formulario Interes'),
     }
 
     _defaults = {
     	'interes_generado': False,
+    }
+# Add a new floats fields and date object account_move
+class account_move(osv.Model):
+    # This OpenERP object inherits from cheques.de.terceros
+    # to add a new float field
+    _inherit = 'account.move'
+    _name = 'account.move'
+    _description = 'account.move'
+
+    _columns = {
+        'formulario_interes_id': fields.many2one('formulario.interes', 'Formulario Interes'),
     }
 
 #Add a new floats fields object res.partner
@@ -63,6 +75,233 @@ class res_partner(osv.Model):
     _columns = {
         'subcuenta_ids' : fields.one2many('subcuenta', 'subcuenta_id', 'Subcuentas'),
     }
+
+#Add a new object, contains the move.line auto generate
+class formularioInteres(osv.Model):
+    _name = 'formulario.interes'
+    _description = 'Formulario para el calculo de intereses'
+    _rec_name = 'id'
+    _columns = {
+        'id': fields.integer('Nro'),
+        'fecha_hasta' : fields.date('Fecha hasta', required=True),
+        'tipo': fields.selection([('directaMensual', 'Directa Mensual'), ('equivalenteAnual', 'Equivalente anual')], string='Tipo', required=True),
+        'state': fields.selection([('pendiente', 'Pendiente'), ('borrador', 'Borrador'), ('confirmado', 'Confirmado'), ('cancelado', 'Cancelado')], string='Estado', readonly=True),
+        'tasa_interes' : fields.float('Tasa de interes', required=True),
+        'subcuenta_id': fields.many2one('subcuenta', 'Subcuenta'),
+        'asientos_ids': fields.one2many('account.move', 'formulario_interes_id', 'Formulario Interes', ondelete='cascade', readonly=True),
+        'apuntes_calculados_ids': fields.one2many('account.move.line', 'formulario_interes_id','Apuntes calculados'),
+    }
+
+    _defaults = {
+        'fecha_hasta': lambda *a: time.strftime('%Y-%m-%d'),
+        'tipo': 'directaMensual',
+        'state': 'pendiente',
+    }
+
+    @api.one
+    @api.constrains('tasa_interes')
+    def _check_tasa_interes(self):
+        _logger.error("check tasa interes")
+        if self.tasa_interes <= 0:
+            raise ValidationError("La tasa de interes no puede ser igual o menos que cero.")
+
+
+    @api.one
+    @api.constrains('id')
+    def _check_crear_nuevo_formulario(self):
+        _logger.error("check crear nuevo formulario")
+        formulario_interes_ids = self.subcuena_id.formulario_interes_ids
+        formulario_pnediente = False
+        if formulario_interes_ids != False:
+            for formulario in formulario_interes_ids:
+                if formulario.state == 'pendiente' or formulario.state == 'borrador':
+                    formulario_pnediente = True
+
+        if formulario_pnediente:
+            raise ValidationError("Existen formulario/s pendientes o en borrador")
+
+
+    @api.multi
+    def generar_intereses(self, cr):
+        self.state = 'borrador'
+        apunte_previo = None
+        move_ids = []
+        apuntes_calculados_ids = []
+        apuntes_ids = self.subcuenta_id.apuntes_ids
+        company_id = self.env['res.users'].browse(self.env.uid).company_id.id
+        _logger.error("caclular_intereses apuntes::: %r", apuntes_ids)
+        count = len(apuntes_ids)
+        i = 1
+        while i <= count:
+            apunte = apuntes_ids[count-i]
+            _logger.error("FOR apuntes_actual: %r", apunte)
+            #_logger.error("FOR Apunte actual: debe %r - haber: %r", apunte.debit, apunte.credit)
+            #_logger.error("Apunte previo: %r", apunte_previo)
+            if apunte_previo is not None:
+                _logger.error("FOR fecha: %r", apunte.date)
+                if apunte_previo.date <= self.fecha_hasta:
+                    apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
+                    _logger.error("FOR interes_generado: %r", apunte_previo.interes_generado)
+                    if apunte_previo.interes_generado == False:
+                        apuntes_calculados_ids.append(apunte_previo.id)
+                        apunte_previo.interes_generado = True
+                        fechas_bool = apunte_previo.date != apunte.date
+                        _logger.error("FOR fechas_bool: %r", fechas_bool)
+                        if fechas_bool:
+                            #Cambio de fecha, posible generacion de asiento contable
+                            _logger.error("FOR saldo_acumulado: %r", apunte_previo.saldo_acumulado)
+                            if apunte_previo.saldo_acumulado > 0:
+                                fecha_inicial_str = str(apunte_previo.date)
+                                fecha_final_str = str(apunte.date)
+                                if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
+                                    if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
+                                        formato_fecha = "%Y-%m-%d"
+                                        fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
+                                        fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
+                                        diferencia = fecha_final - fecha_inicial
+                                        
+                                        interes = apunte_previo.saldo_acumulado * diferencia.days * self.tasa_interes / 30 / 100
+                                        _logger.error("interes: %r", interes)
+                                        
+                                        # create move line
+                                        # Registro el monto de interes en la cuenta de ingreso
+                                        detalle = 'Intereses generados - '+ "${0:.2f}".format(apunte_previo.saldo_acumulado)
+                                        detalle = detalle + ' x '+ str(diferencia.days) + ' x ('+str(self.tasa_interes)+'% mensual)'
+                                        aml = {
+                                            'date': apunte.date,
+                                            'account_id': self.subcuenta_id.journal_id.cuenta_ganancia_id.id,
+                                            'name':  detalle,
+                                            'partner_id': apunte.partner_id.id,
+                                            'credit': interes,
+                                        }
+
+                                        # create move line
+                                        # Acredito el monto de intereses a la cuenta del cliente
+                                        aml2 = {
+                                            'date': apunte.date,
+                                            'account_id': apunte.account_id.id,
+                                            'name': detalle,
+                                            'partner_id': apunte.partner_id.id,
+                                            'debit': interes,
+                                            'subcuenta_id': apunte.subcuenta_id.id,
+                                        }
+
+                                        line_ids = [(0, 0, aml), (0,0, aml2)]
+
+                                        # create move
+                                        move_name = "Intereses Generados/"
+                                        move = self.env['account.move'].create({
+                                            'name': move_name,
+                                            'date': apunte.date,
+                                            'journal_id': self.subcuenta_id.journal_id.id,
+                                            'state':'draft',
+                                            'company_id': company_id,
+                                            'partner_id': apunte.partner_id.id,
+                                            'line_ids': line_ids,
+                                        })
+                                        #move.state = 'posted'
+                                        move_ids.append(move.id)
+                                        #Actualizamos la lista!!!!
+                                        apuntes_ids = self.subcuenta_id.apuntes_ids
+                                        count = count + 1
+            else:
+                apunte.saldo_acumulado = apunte.debit - apunte.credit
+
+            if i == count and apunte.date < self.fecha_hasta:
+                if apunte.saldo_acumulado > 0:
+                    apunte.interes_generado = True
+                    fecha_inicial_str = str(apunte.date)
+                    fecha_final_str = str(self.fecha_hasta)
+                    if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
+                        if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
+                            formato_fecha = "%Y-%m-%d"
+                            fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
+                            fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
+                            diferencia = fecha_final - fecha_inicial
+
+                            interes = apunte.saldo_acumulado * diferencia.days * self.tasa_interes / 30 / 100
+                            _logger.error("interes: %r", interes)
+                            # create move line
+                            # Registro el monto de interes en la cuenta de ingreso
+
+                            detalle = 'Intereses generados - '+ "${0:.2f}".format(apunte.saldo_acumulado)
+                            detalle = detalle + ' x '+str(diferencia.days) + ' x ('+str(self.tasa_interes)+'% mensual)'
+
+                            aml = {
+                                'date': self.fecha_hasta,
+                                'account_id': self.subcuenta_id.journal_id.cuenta_ganancia_id.id,
+                                'name': detalle,
+                                'partner_id': apunte.partner_id.id,
+                                'credit': interes,
+                            }
+
+                            # create move line
+                            # Acredito el monto de intereses a la cuenta del cliente
+                            aml2 = {
+                                'date': self.fecha_hasta,
+                                'account_id': apunte.account_id.id,
+                                'name': detalle,
+                                'partner_id': apunte.partner_id.id,
+                                'debit': interes,
+                                'subcuenta_id': apunte.subcuenta_id.id,
+                            }
+
+                            line_ids = [(0, 0, aml), (0,0, aml2)]
+
+                            # create move
+                            move_name = "Intereses Generados/"
+                            move = self.env['account.move'].create({
+                                'name': move_name,
+                                'date': self.fecha_hasta,
+                                'journal_id': self.subcuenta_id.journal_id.id,
+                                'state':'draft',
+                                'company_id': company_id,
+                                'partner_id': apunte.partner_id.id,
+                                'line_ids': line_ids,
+                            })
+                            move_ids.append(move.id)
+            apunte_previo = apuntes_ids[count-i]
+            i = i + 1
+        _logger.error("asientos_ids: %r", move_ids)
+        if move_ids != None:
+            self.asientos_ids = move_ids
+
+        _logger.error("apuntes_ids: %r", apuntes_calculados_ids)
+        if apuntes_calculados_ids != None:
+            self.apuntes_calculados_ids = apuntes_calculados_ids
+        _logger.error("FIN ************************************************")
+        return True
+
+    @api.multi
+    def generar_intereses_confirmar(self, cr):
+        self.state = 'confirmado'
+        _logger.error("formulario.interes:confirmado")
+        asientos_ids = self.asientos_ids
+        for asiento in asientos_ids:
+            pass
+            ##asiento.state = 'posted'
+        return True
+
+    @api.multi
+    def generar_intereses_cancelar(self, cr):
+        _logger.error("formulario.interes:cancelado")
+        self.state = 'borrador'
+        apuntes_ids = self.apuntes_calculados_ids
+        for apunte in apuntes_ids:
+            apunte.interes_generado = False
+
+        if self.state == 'borrador':
+            asientos_ids = self.asientos_ids
+            for asiento in asientos_ids:
+                _logger.error("eliminando el asiento: %r", asiento)
+                asiento.unlink()
+
+        if self.state == 'confirmado':
+            #Generar contra asientos
+            _logger.error("Generar contra asientos")
+
+        self.state = 'cancelado'
+        return True
 
 class subcuenta(osv.Model):
     _name = 'subcuenta'
@@ -79,10 +318,33 @@ class subcuenta(osv.Model):
         'tasa_mensual_descuento' : fields.float('Tasa Mensual Descuento'),
         'tasa_descubierto' : fields.float('Tasa Descubierto'),
         'apuntes_ids': fields.one2many('account.move.line', 'subcuenta_id', 'Apuntes'),
+        'formulario_interes_ids': fields.one2many('formulario.interes', 'subcuenta_id', 'Intereses Auto Generados'),
         #faltan campos derivados
         #saldo
         'saldo' : fields.float('Saldo', compute="_calcular_saldo", readonly=True),
     }
+
+    @api.multi
+    def button_actualizar_saldo_acumulado(self, cr):
+        _logger.error("Actualizar Saldos")
+        apunte_previo = None
+        apuntes_ids = self.apuntes_ids #self.env['subcuenta'].search([('subcuenta_id', '=', self.subcuenta_id)], limit=100),
+        _logger.error("apuntes::: %r", apuntes_ids)
+        count = len(apuntes_ids)
+        i = 1
+        while i <= count:
+            apunte = apuntes_ids[count-i]
+            if apunte_previo:
+                #_logger.error("_apunte.saldo: debito %r, credito %r", apunte.debit, apunte.credit)
+                apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
+            else:
+                #_logger.error("_FIrst: debito %r, credito %r", apunte.debit, apunte.credit)
+                apunte.saldo_acumulado = apunte.debit - apunte.credit
+            apunte_previo = apunte
+            i = i + 1
+            _logger.error("****************************************************")
+
+
 
     @api.model
     def _actualizar_saldo_acumulado(self):
@@ -122,170 +384,6 @@ class subcuenta(osv.Model):
             apunte.interes_generado = False
 
         return True
-    
-    @api.multi
-    def algo2(self, cr):
-        _logger.error("22222222222222222222222222222222")
-        apunte_previo = None
-        apuntes_ids = self.apuntes_ids
-        _logger.error("caclular_intereses apuntes::: %r", apuntes_ids)
-        count = len(apuntes_ids)
-        i = 1
-        while i <= count:
-            apunte = apuntes_ids[count-i]
-            _logger.error("FOR apuntes_actual: %r", apunte)
-            #_logger.error("FOR Apunte actual: debe %r - haber: %r", apunte.debit, apunte.credit)
-            #_logger.error("Apunte previo: %r", apunte_previo)
-            if apunte_previo is not None:
-                apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
-                ##_logger.error("FOR saldo acumulado = debe: %r - haber: %r + acum: %r", apunte.debit, apunte.credit, apunte_previo.saldo_acumulado)
-                fechas_bool = apunte_previo.date != apunte.date
-                #_logger.error("if-- fechas: previa: %r < %r (final) result: %r", apunte_previo.date, apunte.date, fechas_bool)
-                if fechas_bool:
-                    #Cambio de fecha, posible generacion de asiento contable
-                    ##_logger.error("#Cambio de fecha, posible generacion de asiento contable")
-                    if apunte_previo.saldo_acumulado > 0:
-                        #Saldo deudor en cuenta y cambio de fecha => calcular intereses
-                        ##_logger.error("#Saldo deudor en cuenta y cambio de fecha => calcular intereses")
-                        ##_logger.error("#apunte previo.interes_generado %r == False__", apunte_previo.interes_generado)
-                        if apunte_previo.interes_generado == False:
-                            fecha_inicial_str = str(apunte_previo.date)
-                            fecha_final_str = str(apunte.date)
-                            if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
-                                if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
-                                    formato_fecha = "%Y-%m-%d"
-                                    fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
-                                    fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
-                                    diferencia = fecha_final - fecha_inicial
-                                    
-                                    interes = apunte_previo.saldo_acumulado * diferencia.days * self.tasa_descubierto / 30 / 100
-                                    _logger.error("interes: %r", interes)
-                                    company_id = self.env['res.users'].browse(self.env.uid).company_id.id
-                                    
-                                    # create move line
-                                    # Registro el monto de interes en la cuenta de ingreso
-                                    
-                                    aml = {
-                                        'date': apunte.date,
-                                        'account_id': self.journal_id.cuenta_ganancia_id.id,
-                                        'name': 'Intereses generados',
-                                        'partner_id': apunte.partner_id.id,
-                                        'credit': interes,
-                                    }
-
-                                    # create move line
-                                    # Acredito el monto de intereses a la cuenta del cliente
-                                    aml2 = {
-                                        'date': apunte.date,
-                                        'account_id': apunte.account_id.id,
-                                        'name': 'Intereses generados',
-                                        'partner_id': apunte.partner_id.id,
-                                        'debit': interes,
-                                        'subcuenta_id': apunte.subcuenta_id.id,
-                                    }
-
-                                    line_ids = [(0, 0, aml), (0,0, aml2)]
-
-                                    # create move
-                                    move_name = "Intereses Generados/"
-                                    move = self.env['account.move'].create({
-                                        'name': move_name,
-                                        'date': apunte.date,
-                                        'journal_id': self.journal_id.id,
-                                        'state':'draft',
-                                        'company_id': company_id,
-                                        'partner_id': apunte.partner_id.id,
-                                        'line_ids': line_ids,
-                                    })
-                                    #move.state = 'posted'
-                                    apuntes_ids = self.apuntes_ids
-                                    count = count + 1
-                        apunte_previo.interes_generado = True
-                    else:
-                        #Saldo acreedor, no es necesario calcular intereses
-                        apunte_previo.interes_generado = True
-            else:
-                apunte.saldo_acumulado = apunte.debit - apunte.credit
-            apunte_previo = apuntes_ids[count-i]
-            _logger.error("FOR apunte_previo: %r", apunte_previo)
-            i = i + 1
-        return True
-
-    @api.one
-    def _calcular_intereses(self, cr):
-		apunte_previo = None
-		apuntes_ids = self.apuntes_ids
-		_logger.error("caclular_intereses apuntes::: %r", apuntes_ids)
-		count = len(apuntes_ids)
-		i = 1
-		while i <= count:
-			apunte = apuntes_ids[count-i]
-			if apunte_previo:
-				if apunte_previo.date < apunte.date:
-    				#Cambio de fecha, posible generacion de asiento contable
-					_logger.error("#Cambio de fecha, posible generacion de asiento contable")
-					if apunte_previo.saldo_acumulado > 0:
-    					#Saldo deudor en cuenta y cambio de fecha => calcular intereses
-						_logger.error("#Saldo deudor en cuenta y cambio de fecha => calcular intereses")
-						if apunte_previo.interes_generado == False:
-							fecha_inicial_str = str(apunte_previo.date)
-							fecha_final_str = str(apunte.date)
-							if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
-								if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
-									formato_fecha = "%Y-%m-%d"
-									fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
-									fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
-									diferencia = fecha_final - fecha_inicial
-									
-									interes = apunte_previo.saldo_acumulado * diferencia.days * self.tasa_descubierto / 30 / 100
-									_logger.error("interes: %r", interes)
-									company_id = self.env['res.users'].browse(self.env.uid).company_id.id
-									
-									# create move line
-									# Registro el monto de interes en la cuenta de ingreso
-									
-									aml = {
-										'date': apunte.date,
-										'account_id': self.journal_id.cuenta_ganancia_id.id,
-										'name': 'Intereses generados',
-										'partner_id': apunte.partner_id.id,
-										'credit': interes,
-									}
-
-							        # create move line
-							        # Acredito el monto de intereses a la cuenta del cliente
-							        aml2 = {
-							            'date': apunte.date,
-							            'account_id': apunte.account_id,
-							            'name': 'Intereses generados',
-							            'partner_id': apunte.partner_id.id,
-							            'debit': interes,
-							            'subcuenta_id': apunte.subcuenta_id.id,
-							        }
-
-							        line_ids = [(0, 0, aml), (0,0, aml2)]
-
-							        # create move
-							        move_name = "Intereses Generados/"
-							        move = self.env['account.move'].create({
-							            'name': move_name,
-							            'date': apunte.date,
-							            'journal_id': self.journal_id.id,
-							            'state':'draft',
-							            'company_id': company_id,
-							            'partner_id': apunte.partner_id.id,
-							            'line_ids': line_ids,
-							        })
-							        move.state = 'posted'
-							        apuntes_ids = self.apuntes_ids
-							        count = count + 2
-						apunte_previo.interes_generado = True
-					else:
-						#Saldo acreedor, no es necesario calcular intereses
-						apunte_previo.interes_generado = True
-    		i = i + 1
-		return True
-
 
     @api.one
     @api.depends('apuntes_ids')

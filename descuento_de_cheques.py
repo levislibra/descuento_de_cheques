@@ -151,7 +151,7 @@ class descuento_de_cheques(osv.Model):
         'invoice_id':fields.many2one('account.invoice', 'Factura', readonly=True),
         'efectivo_al_cliente':fields.float('Efectivo al cliente'),
         'cheques_ids': fields.one2many('cheques.de.terceros', 'liquidacion_id', 'Cheques', ondelete='cascade'),
-        'state': fields.selection([('cotizacion', 'Cotizacion'), ('confirmada', 'Confirmada'), ('pagado', 'Pagado'), ('cancelada', 'Cancelada')], string='Status', readonly=True, track_visibility='onchange', computed="_create_invoice_prov"),
+        'state': fields.selection([('cotizacion', 'Cotizacion'), ('confirmada', 'Confirmada'), ('pagado', 'Pagado'), ('cancelada', 'Cancelada')], string='Status', readonly=True, track_visibility='onchange'),
 
         'cliente_subcuenta_ids': fields.one2many('subcuenta', 'descuento_id', related='cliente_id.subcuenta_ids', readonly=True, store=False),
         'bruto_liquidacion': fields.float(string='Bruto', compute='_calcular_montos_liquidacion', readonly=True, store=True),
