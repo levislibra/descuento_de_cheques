@@ -81,6 +81,7 @@ class formularioInteres(osv.Model):
     _name = 'formulario.interes'
     _description = 'Formulario para el calculo de intereses'
     _rec_name = 'id'
+    _order = 'id desc'
     _columns = {
         'id': fields.integer('Nro'),
         'fecha_hasta' : fields.date('Fecha hasta', required=True),
@@ -98,26 +99,32 @@ class formularioInteres(osv.Model):
         'state': 'pendiente',
     }
 
+    @api.onchange('tipo')
+    def setear_tasa_por_defecto(self):
+        _logger.error("onchange tipo")
+        if self.subcuenta_id is not None:
+            self.tasa_interes = self.subcuenta_id.tasa_descubierto
+
+
     @api.one
     @api.constrains('tasa_interes')
     def _check_tasa_interes(self):
-        _logger.error("check tasa interes")
         if self.tasa_interes <= 0:
-            raise ValidationError("La tasa de interes no puede ser igual o menos que cero.")
+            raise ValidationError("La tasa de interes no puede ser igual o menor que cero.")
 
 
     @api.one
-    @api.constrains('id')
+    @api.constrains('state')
     def _check_crear_nuevo_formulario(self):
-        _logger.error("check crear nuevo formulario")
-        formulario_interes_ids = self.subcuena_id.formulario_interes_ids
-        formulario_pnediente = False
+        formulario_interes_ids = self.subcuenta_id.formulario_interes_ids
+        formulario_pendiente = False
         if formulario_interes_ids != False:
             for formulario in formulario_interes_ids:
-                if formulario.state == 'pendiente' or formulario.state == 'borrador':
-                    formulario_pnediente = True
+                if formulario.id != self.id and (formulario.state == 'pendiente' or formulario.state == 'borrador'):
+                    formulario_pendiente = True
+                    break
 
-        if formulario_pnediente:
+        if formulario_pendiente:
             raise ValidationError("Existen formulario/s pendientes o en borrador")
 
 
@@ -129,32 +136,28 @@ class formularioInteres(osv.Model):
         apuntes_calculados_ids = []
         apuntes_ids = self.subcuenta_id.apuntes_ids
         company_id = self.env['res.users'].browse(self.env.uid).company_id.id
-        _logger.error("caclular_intereses apuntes::: %r", apuntes_ids)
         count = len(apuntes_ids)
         i = 1
         while i <= count:
             apunte = apuntes_ids[count-i]
-            _logger.error("FOR apuntes_actual: %r", apunte)
-            #_logger.error("FOR Apunte actual: debe %r - haber: %r", apunte.debit, apunte.credit)
-            #_logger.error("Apunte previo: %r", apunte_previo)
             if apunte_previo is not None:
-                _logger.error("FOR fecha: %r", apunte.date)
                 if apunte_previo.date <= self.fecha_hasta:
                     apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
-                    _logger.error("FOR interes_generado: %r", apunte_previo.interes_generado)
                     if apunte_previo.interes_generado == False:
                         apuntes_calculados_ids.append(apunte_previo.id)
                         apunte_previo.interes_generado = True
                         fechas_bool = apunte_previo.date != apunte.date
-                        _logger.error("FOR fechas_bool: %r", fechas_bool)
                         if fechas_bool:
                             #Cambio de fecha, posible generacion de asiento contable
-                            _logger.error("FOR saldo_acumulado: %r", apunte_previo.saldo_acumulado)
                             if apunte_previo.saldo_acumulado > 0:
-                                fecha_inicial_str = str(apunte_previo.date)
-                                fecha_final_str = str(apunte.date)
-                                if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
-                                    if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
+                                fecha_inicial_str = False
+                                fecha_final_str = False
+                                if apunte_previo.date != False:
+                                    fecha_inicial_str = str(apunte_previo.date)
+                                if apunte.date != False:
+                                    fecha_final_str = str(apunte.date)
+                                if fecha_inicial_str != False:
+                                    if fecha_final_str != False:
                                         formato_fecha = "%Y-%m-%d"
                                         fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
                                         fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
@@ -210,6 +213,7 @@ class formularioInteres(osv.Model):
             if i == count and apunte.date < self.fecha_hasta:
                 if apunte.saldo_acumulado > 0:
                     apunte.interes_generado = True
+                    apuntes_calculados_ids.append(apunte.id)
                     fecha_inicial_str = str(apunte.date)
                     fecha_final_str = str(self.fecha_hasta)
                     if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
@@ -220,7 +224,6 @@ class formularioInteres(osv.Model):
                             diferencia = fecha_final - fecha_inicial
 
                             interes = apunte.saldo_acumulado * diferencia.days * self.tasa_interes / 30 / 100
-                            _logger.error("interes: %r", interes)
                             # create move line
                             # Registro el monto de interes en la cuenta de ingreso
 
@@ -254,7 +257,7 @@ class formularioInteres(osv.Model):
                                 'name': move_name,
                                 'date': self.fecha_hasta,
                                 'journal_id': self.subcuenta_id.journal_id.id,
-                                'state':'draft',
+                                'state':'posted',
                                 'company_id': company_id,
                                 'partner_id': apunte.partner_id.id,
                                 'line_ids': line_ids,
@@ -262,56 +265,102 @@ class formularioInteres(osv.Model):
                             move_ids.append(move.id)
             apunte_previo = apuntes_ids[count-i]
             i = i + 1
-        _logger.error("asientos_ids: %r", move_ids)
         if move_ids != None:
             self.asientos_ids = move_ids
 
-        _logger.error("apuntes_ids: %r", apuntes_calculados_ids)
         if apuntes_calculados_ids != None:
             self.apuntes_calculados_ids = apuntes_calculados_ids
-        _logger.error("FIN ************************************************")
         return True
 
     @api.multi
     def generar_intereses_confirmar(self, cr):
         self.state = 'confirmado'
-        _logger.error("formulario.interes:confirmado")
         asientos_ids = self.asientos_ids
         for asiento in asientos_ids:
-            pass
-            ##asiento.state = 'posted'
+            asiento.state = 'posted'
         return True
+
 
     @api.multi
     def generar_intereses_cancelar(self, cr):
-        _logger.error("formulario.interes:cancelado")
-        self.state = 'borrador'
-        apuntes_ids = self.apuntes_calculados_ids
-        for apunte in apuntes_ids:
-            apunte.interes_generado = False
 
-        if self.state == 'borrador':
-            asientos_ids = self.asientos_ids
-            for asiento in asientos_ids:
-                _logger.error("eliminando el asiento: %r", asiento)
-                asiento.unlink()
+        formulario_interes_ids = self.subcuenta_id.formulario_interes_ids
+        formulario_pendiente = False
+        if formulario_interes_ids != False:
+            for formulario in formulario_interes_ids:
+                if formulario.id > self.id and (formulario.state == 'confirmado' or formulario.state == 'pendiente' or formulario.state == 'borrador'):
+                    formulario_pendiente = True
+                    break
 
-        if self.state == 'confirmado':
-            #Generar contra asientos
-            _logger.error("Generar contra asientos")
+        if formulario_pendiente:
+            raise ValidationError("Existen formulario/s pendiente, en borrador o confirmados posterior a este.")
+        else:
+            apuntes_ids = self.apuntes_calculados_ids
+            for apunte in apuntes_ids:
+                apunte.interes_generado = False
 
-        self.state = 'cancelado'
+            if self.state == 'borrador':
+                asientos_ids = self.asientos_ids
+                for asiento in asientos_ids:
+                    asiento.unlink()
+
+            if self.state == 'confirmado':
+                #Generar contra asientos
+                moves_ids = []
+                company_id = self.env['res.users'].browse(self.env.uid).company_id.id
+                asientos_ids = self.asientos_ids
+                for asiento in asientos_ids:
+                    moves_ids.append(asiento.id)
+                    if asiento is not None:
+                        line_ids = []
+                        for apunte in asiento.line_ids:
+                            date = apunte.date
+                            account_id = apunte.account_id.id
+                            name = "Cancelo -" + apunte.name
+                            partner_id = apunte.partner_id.id
+                            credit = apunte.debit
+                            debit = apunte.credit
+                            subcuenta_id = apunte.subcuenta_id.id
+
+                            aml = {
+                                'date': date,
+                                'account_id': account_id,
+                                'name': name,
+                                'partner_id': partner_id,
+                                'credit': credit,
+                                'debit': debit,
+                                'subcuenta_id': subcuenta_id,
+                            }
+
+                            line_ids.append((0, 0, aml))
+
+                        if line_ids != None:
+                            # create move
+                            move_name = "Cancelar - Intereses Generados/"
+                            move = self.env['account.move'].create({
+                                'name': move_name,
+                                'date': asiento.date,
+                                'journal_id': asiento.journal_id.id,
+                                'state':'posted',
+                                'company_id': company_id,
+                                'partner_id': asiento.partner_id.id,
+                                'line_ids': line_ids,
+                            })
+                            moves_ids.append(move.id)
+                if moves_ids != None:
+                    self.asientos_ids = moves_ids
+
+            self.state = 'cancelado'
         return True
 
 class subcuenta(osv.Model):
     _name = 'subcuenta'
     _description = 'subcuenta'
     _columns =  {
-        'name': fields.char('Subcuenta', required=True),
+        'name': fields.char('Nombre', required=True),
         'subcuenta_id': fields.many2one('res.partner', 'Cliente'),
         'journal_id': fields.many2one('account.journal', 'Diario', required=True),
         'descuento_id': fields.many2one('descuento.de.cheques', 'Descuento'),
-        'active': fields.boolean('Activa'),
         'descuento_de_cheques': fields.boolean('Permite descuento de cheques'),
         'prestamos': fields.boolean('Permite prestamos'),
         'tasa_fija_descuento' : fields.float('Tasa Fija Descuento'),
@@ -319,76 +368,53 @@ class subcuenta(osv.Model):
         'tasa_descubierto' : fields.float('Tasa Descubierto'),
         'apuntes_ids': fields.one2many('account.move.line', 'subcuenta_id', 'Apuntes'),
         'formulario_interes_ids': fields.one2many('formulario.interes', 'subcuenta_id', 'Intereses Auto Generados'),
+        'state': fields.selection([('borrador', 'Borrador'), ('activa', 'Activa'), ('cancelada', 'Cancelada')], string='Estado', readonly=True),
         #faltan campos derivados
         #saldo
         'saldo' : fields.float('Saldo', compute="_calcular_saldo", readonly=True),
     }
 
+    @api.one
+    def activar(self, cr):
+        _logger.error("Activar cuenta")
+        self.state = 'activa'
+    
+
     @api.multi
     def button_actualizar_saldo_acumulado(self, cr):
-        _logger.error("Actualizar Saldos")
         apunte_previo = None
-        apuntes_ids = self.apuntes_ids #self.env['subcuenta'].search([('subcuenta_id', '=', self.subcuenta_id)], limit=100),
-        _logger.error("apuntes::: %r", apuntes_ids)
+        apuntes_ids = self.apuntes_ids
+        #self.env['subcuenta'].search([('subcuenta_id', '=', self.subcuenta_id)], limit=100),
         count = len(apuntes_ids)
         i = 1
         while i <= count:
             apunte = apuntes_ids[count-i]
             if apunte_previo:
-                #_logger.error("_apunte.saldo: debito %r, credito %r", apunte.debit, apunte.credit)
                 apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
             else:
-                #_logger.error("_FIrst: debito %r, credito %r", apunte.debit, apunte.credit)
                 apunte.saldo_acumulado = apunte.debit - apunte.credit
             apunte_previo = apunte
             i = i + 1
-            _logger.error("****************************************************")
-
-
 
     @api.model
     def _actualizar_saldo_acumulado(self):
-    	_logger.error("Actualizar Saldos")
     	apunte_previo = None
-    	apuntes_ids = self.apuntes_ids #self.env['subcuenta'].search([('subcuenta_id', '=', self.subcuenta_id)], limit=100),
-    	_logger.error("apuntes::: %r", apuntes_ids)
+    	apuntes_ids = self.apuntes_ids
     	count = len(apuntes_ids)
     	i = 1
     	while i <= count:
-    		apunte = apuntes_ids[count-i]
-    		_logger.error("_FOR reconciled: %r", apunte.reconciled)
-    		_logger.error("_FOR debit: %r", apunte.debit)
-    		_logger.error("_FOR debit_cash_basis: %r", apunte.debit_cash_basis)
-    		_logger.error("_FOR credit: %r", apunte.credit)
-    		_logger.error("_FOR credit_cash_basis: %r", apunte.credit_cash_basis)
-    		_logger.error("_FOR balance: %r", apunte.balance)
-    		_logger.error("_FOR balance_cash_basis: %r", apunte.balance_cash_basis)
-    		_logger.error("_FOR amount_currency: %r", apunte.amount_currency)
-    		_logger.error("_FOR amount_residual: %r", apunte.amount_residual)
-    		_logger.error("_FOR amount_residual_currency: %r", apunte.amount_residual_currency)
-    		
+    		apunte = apuntes_ids[count-i]    		
     		if apunte_previo:
-    			#_logger.error("_apunte.saldo: debito %r, credito %r", apunte.debit, apunte.credit)
     			apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
     		else:
-    			#_logger.error("_FIrst: debito %r, credito %r", apunte.debit, apunte.credit)
     			apunte.saldo_acumulado = apunte.debit - apunte.credit
     		apunte_previo = apunte
     		i = i + 1
-    		_logger.error("****************************************************")
 
-    @api.multi
-    def algo(self, cr):
-        _logger.error("algooooooooooooooooooooooooooooooooooooooooooooooooooooo")
-        for apunte in self.apuntes_ids:
-            apunte.interes_generado = False
-
-        return True
 
     @api.one
     @api.depends('apuntes_ids')
     def _calcular_saldo(self):
-   		_logger.error("Calcular Saldo")
 		self.saldo = 0
 		for apunte in self.apuntes_ids:
 			self.saldo += apunte.debit - apunte.credit
@@ -408,7 +434,7 @@ class subcuenta(osv.Model):
     			}
 
     _defaults = {
-    	'active': True,
+    	'state': 'borrador',
         'descuento_de_cheques': False,
         'prestamos': False,
         'saldo': 0,

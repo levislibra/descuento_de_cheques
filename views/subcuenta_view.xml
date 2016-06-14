@@ -24,9 +24,9 @@
         <field name="arch" type="xml">
             <form string="Formulario de intereses" editable="bottom">
                 <header>
-                    <field name="state"  widget="statusbar"/>
                     <button name="generar_intereses_confirmar" states="borrador" string="Confirmar intereses" type="object"/>
-                    <button name="generar_intereses_cancelar" states="borrador,confirmado,cancelado" string="Cancelar intereses" type="object"/>
+                    <button name="generar_intereses_cancelar" states="borrador,confirmado" string="Cancelar intereses" type="object"/>
+                    <field name="state"  widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
@@ -83,13 +83,14 @@
         <field name="arch" type="xml">
             <form string="Subcuenta" editable="bottom">
                 <header>
+                    <button name="activar" states="borrador" string="Activar" type="object"/>
+                    <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
-                        <field name="name"/>
-                        <field name="active"/>
-                        <field name="subcuenta_id" attrs="{'required': [('active', '=', True)]}"/>
-                        <field name="journal_id"/>
+                        <field name="name" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')], 'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="journal_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                         <field name="descuento_de_cheques"/>
                         <field name="prestamos"/>
                         <field name="tasa_fija_descuento"/>
@@ -99,7 +100,7 @@
                     <notebook>
                         <page name="Movimientos" string="Movimientos">
                             <button name="button_actualizar_saldo_acumulado" string="Actualizar Cuenta" type="object" />
-                            <field name="apuntes_ids" attrs="{'readonly': [('active', '=', True)]}">
+                            <field name="apuntes_ids" attrs="{'readonly': [('state', '!=', 'borrador')]}">
                                 <tree name="movimientos">
                                     <field name="date"/>
                                     <field name="name"/>
@@ -113,7 +114,6 @@
                             </field>
                         </page>
                         <page name="intereses" string="Intereses Generados">
-                            <button name="algo" string="Setear a False" type="object" />
                             <field name="formulario_interes_ids"/>
                         </page>
                     </notebook>
@@ -129,7 +129,7 @@
         <field name="arch" type="xml">
             <tree string="Subcuenta" editable="bottom">
                 <field name="name"/>
-                <field name="subcuenta_id" attrs="{'required': [('active', '=', True)]}"/>
+                <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')]}"/>
                 <field name="journal_id"/>
                 <field name="descuento_de_cheques"/>
                 <field name="prestamos"/>

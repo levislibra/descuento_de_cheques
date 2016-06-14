@@ -31,6 +31,8 @@ from openerp.exceptions import UserError
 from openerp.exceptions import ValidationError
 import logging
 from openerp.osv import orm
+import calendar
+import pprint
 
 import openerp.addons.cheques_de_terceros
 import models.subcuenta
@@ -84,22 +86,63 @@ class cheques_de_terceros(osv.Model):
         _logger.error("_calcular_descuento_mensual")
     	self.monto_mensual_descuento = self.dias_descuento * ((self.tasa_mensual_descuento / 30) / 100) * self.importe
 
+
     @api.one
     @api.depends('liquidacion_id.fecha_liquidacion', 'fecha_acreditacion_descuento')
     def _calcular_descuento_dias(self):
+        fecha_inicial_str = False
+        fecha_final_str = False
         _logger.error("_calcular_descuento_dias")
-    	fecha_inicial_str = str(self.liquidacion_id.fecha_liquidacion)
-    	fecha_final_str = str(self.fecha_acreditacion_descuento)
-    	if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
-    		if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
-    			formato_fecha = "%Y-%m-%d"
-	    		fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
-	    		fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
-	    		diferencia = fecha_final - fecha_inicial
-	    		if diferencia.days > 0:
-	    			self.dias_descuento = diferencia.days
-	    		else:
-	    			self.dias_descuento = 0
+        _logger.error("Fecha_inicial antes: %r",fecha_inicial_str)
+        if self.liquidacion_id.fecha_liquidacion != False:
+    	   fecha_inicial_str = str(self.liquidacion_id.fecha_liquidacion)
+        if self.fecha_acreditacion_descuento != False:
+    	   fecha_final_str = str(self.fecha_acreditacion_descuento)
+        _logger.error("fecha_inicial: %r",fecha_inicial_str)
+        _logger.error("fecha_final: %r",fecha_final_str)
+
+    	if fecha_inicial_str != False and fecha_final_str != False:
+            formato_fecha = "%Y-%m-%d"
+            fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
+            fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
+            diferencia = fecha_final - fecha_inicial
+            ultimos_dias = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+            i = 0
+            fines_de_mes = []
+            while fecha_inicial < fecha_final:
+                ano_actual = fecha_inicial.year
+                mes_actual = fecha_inicial.month
+                dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                fecha_fin_de_mes_str = str(ano_actual)+"-"+str(mes_actual)+"-"+str(dia_actual_fin_de_mes)
+                fecha_fin_de_mes = datetime.strptime(fecha_fin_de_mes_str, formato_fecha)
+                if fecha_fin_de_mes >= fecha_inicial and fecha_fin_de_mes <= fecha_final:
+                    _logger.error("FECHA ADD")
+                    fines_de_mes.append(fecha_fin_de_mes)
+
+                if mes_actual == 12:
+                    mes_proximo = 1
+                    ano_proximo = ano_actual + 1
+                else:
+                    mes_proximo = mes_actual + 1
+                    ano_proximo = ano_actual
+                dia_proximo = 15
+                fecha_inicial_str = str(ano_proximo)+"-"+str(mes_proximo)+"-"+str(dia_proximo)
+                fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
+                i = i + 1
+            _logger.error("RESULTADO: %r", fines_de_mes)
+
+
+            
+
+
+
+
+            
+            if diferencia.days > 0:
+                self.dias_descuento = diferencia.days
+            else:
+                self.dias_descuento = 0
+
 
     #Ojo -- actualizar bien esta funcion.
     @api.onchange('name')
@@ -120,19 +163,6 @@ class cheques_de_terceros(osv.Model):
     def _calcular_descuento_neto(self):
         _logger.error("_calcular_descuento_neto")
     	self.monto_neto_descuento = self.importe - self.monto_fijo_descuento - self.monto_mensual_descuento
-
-
-
-# Add a new floats fields object res.partner
-#class res_partner(osv.Model):
-    # This OpenERP object inherits from res.partner
-    # to add a new textual field
-#    _inherit = 'res.partner'
-#
-#    _columns = {
-#        'tasa_fija_recomendada' : fields.float('Tasa Fija Recomendada'),
-#        'tasa_mensual_recomendada' : fields.float('Tasa Mensual Recomendada'),
-#    }
 
 
 class descuento_de_cheques(osv.Model):
@@ -168,6 +198,9 @@ class descuento_de_cheques(osv.Model):
         _logger.error("##########________ self.cliente_id.id: %r", self.cliente_id.name)
         if self.subcuenta_id.subcuenta_id.id != self.cliente_id.id:
             raise ValidationError("La subcuenta no pertenece al cliente")
+
+        #if self.subcuenta_id.state != 'activa':
+            #raise ValidationError("La subcuenta no esta Activa")
 
     @api.one
     @api.constrains('fecha_liquidacion', 'subcuenta_id')
