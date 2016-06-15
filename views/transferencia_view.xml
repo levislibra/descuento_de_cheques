@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+    <!-- formulario Intereses - Formulario de creacion -->
+
+    <record id="transferencia_tree" model="ir.ui.view">
+        <field name="name">transferencia.tree</field>
+        <field name="model">transferencia</field>
+        <field name="arch" type="xml">
+            <tree string="Pagos y Cobros">
+                <field name="fecha"/>
+                <field name="tipo_de_pago"/>
+                <field name="entidad_id"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="transferencia_form" model="ir.ui.view">
+        <field name="name">transferencia.form</field>
+        <field name="model">transferencia</field>
+        <field name="arch" type="xml">
+            <form string="Pago o Cobro" editable="bottom">
+                <header>
+                    <button name="confirmar" states="borrador" string="Confirmar" type="object"/>
+                    <button name="registrar" states="confirmada" string="Regisrar" type="object"/>
+                    <field name="state"  widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="fecha" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="tipo_de_pago" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="entidad_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="subcuenta_id" domain="[('subcuenta_id.id','=', entidad_id)]" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="efectivo" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="cuenta_efectivo_id" attrs="{'invisible': [('efectivo', '=', False)], 'readonly': [('state', '!=', 'borrador')], 'required': [('efectivo', '=', True)]}"/>
+                        <field name="monto_efectivo"  attrs="{'invisible': [('efectivo', '=', False)], 'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="cheques" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="cuenta_cheques_id" attrs="{'invisible': [('cheques', '=', False)], 'readonly': [('state', '!=', 'borrador')], 'required': [('cheques', '=', True)]}"/>
+                        <field name="cheques_ids" widget="many2many_tags" attrs="{'invisible': [('cheques', '=', False)], 'readonly': [('state', '!=', 'borrador')]}" />
+                        <field name="monto_en_cheques" attrs="{'invisible': [('cheques', '=', False)]}"/>
+                    </group>
+                    <notebook>
+                        <page name="asiento" string="Asiento">
+                            
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="transferencia_action" model="ir.actions.act_window">
+        <field name="name">transferencia</field>
+        <field name="res_model">transferencia</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="transferencia_tree"/>
+    </record>
+
+    <menuitem id="smenu_clientes_efectivo_action" name="Efectivo al cliente" parent="smenu_clientes" action="transferencia_action"  sequence="0" />
+
+    </data>
+</openerp>

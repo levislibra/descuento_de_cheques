@@ -121,24 +121,6 @@
     </record>
 
 
-    <!-- Menu Clientes heredado 
-    <record id="inherit_partner" model="ir.ui.view">
-        <field name="name">res.partner.kanban</field>
-        <field name="model">res.partner</field>
-        <field name="type">form</field>
-        <field name="inherit_id" ref="base.res_partner_kanban_view"/>
-        <field name="arch" type="xml">
-        </field>
-    </record>
-
-    <record id="clientes_action" model="ir.actions.act_window">
-        <field name="name">Clientes</field>
-        <field name="res_model">res.partner</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="action_partner_form_view1"/>
-    </record>-->
-
-
     <!-- Menu Principal del modulo (barra superior) - Financiera -->
     <menuitem id="menu_financiera" name="Financiera" />
     
@@ -150,13 +132,9 @@
 
     <!-- SubMenu 2 - Clientes -->
     <menuitem id="smenu_clientes" name="Clientes" parent="menu_financiera"  sequence="0" />
-    <menuitem id="base.menu_partner_form" name="Clientes" parent="smenu_clientes" action="base.action_partner_form" sequence="3" />
+    <menuitem id="base.menu_partner_form" name="Clientes" parent="smenu_clientes" action="base.action_partner_form" sequence="0" />
 
     <menuitem id="smenu_clientes_intereses_action" name="Calcular intereses" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_efectivo_action" name="Efectivo al cliente" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_pago_action" name="Pago del cliente" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
 
     <menuitem id="smenu_clientes_configuracion_action" name="Configuracion" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
 

@@ -22,7 +22,8 @@ Manejo de operatoria de descuento de cheques a clientes.
 
     'data': [
         'descuento_de_cheques_view.xml',
-        'views/subcuenta_view.xml'
+        'views/subcuenta_view.xml',
+        'views/transferencia_view.xml'
 
     ],
     'installable': True,
