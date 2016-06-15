@@ -140,16 +140,24 @@ class formularioInteres(osv.Model):
         i = 1
         while i <= count:
             apunte = apuntes_ids[count-i]
+            _logger.error("Apunte actual: fecha: %r, debe: %r - haber: %r", apunte.date, apunte.debit, apunte.credit)
             if apunte_previo is not None:
+                _logger.error("__Apunte previo: fecha: %r, debe: %r - haber: %r", apunte_previo.date, apunte_previo.debit, apunte_previo.credit)
                 if apunte_previo.date <= self.fecha_hasta:
+                    _logger.error("<= fecha_hasta")
                     apunte.saldo_acumulado = apunte.debit - apunte.credit + apunte_previo.saldo_acumulado
                     if apunte_previo.interes_generado == False:
+                        _logger.error("<= interes_generado = False")
                         apuntes_calculados_ids.append(apunte_previo.id)
                         apunte_previo.interes_generado = True
+
                         fechas_bool = apunte_previo.date != apunte.date
                         if fechas_bool:
+                            _logger.error("<= fechas_bool")
                             #Cambio de fecha, posible generacion de asiento contable
+                            _logger.error("apunte_previo.saldo_acumulado: %r", apunte_previo.saldo_acumulado)
                             if apunte_previo.saldo_acumulado > 0:
+                                _logger.error("saldo > 0")
                                 fecha_inicial_str = False
                                 fecha_final_str = False
                                 if apunte_previo.date != False:
@@ -158,20 +166,51 @@ class formularioInteres(osv.Model):
                                     fecha_final_str = str(apunte.date)
                                 if fecha_inicial_str != False:
                                     if fecha_final_str != False:
+                                        _logger.error("fechas != False")
                                         formato_fecha = "%Y-%m-%d"
                                         fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
                                         fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
+                                        
+                                        #Verificar si hay fecha de fin de mes entre las dos fechas
+
+                                        ultimos_dias = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+                                        ano_actual = fecha_inicial.year
+                                        mes_actual = fecha_inicial.month
+                                        dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                                        fecha_fin_de_mes_str = str(ano_actual)+"-"+str(mes_actual)+"-"+str(dia_actual_fin_de_mes)
+                                        fecha_fin_de_mes = datetime.strptime(fecha_fin_de_mes_str, formato_fecha)
+                                        if fecha_inicial.day == dia_actual_fin_de_mes:
+                                            if mes_actual == 12:
+                                                mes_actual = 1
+                                                ano_actual = ano_actual + 1
+                                                dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                                            else:
+                                                mes_actual = mes_actual + 1
+                                                dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                                        bandera_fin_de_mes = False
+                                        if fecha_fin_de_mes > fecha_inicial and fecha_fin_de_mes < fecha_final:
+                                            _logger.error("inter ADD")
+                                            fecha_final = fecha_fin_de_mes
+                                            bandera_fin_de_mes = True
+                                        
+                                        _logger.error("Fecha_inicial: %r", fecha_inicial_str)
+                                        _logger.error("Fecha_final: %r", str(fecha_final))
+
+
+
                                         diferencia = fecha_final - fecha_inicial
                                         
                                         interes = apunte_previo.saldo_acumulado * diferencia.days * self.tasa_interes / 30 / 100
                                         _logger.error("interes: %r", interes)
                                         
+                                        if bandera_fin_de_mes:
+                                            saldo_acumulado_nuevo = interes + apunte_previo.saldo_acumulado
                                         # create move line
                                         # Registro el monto de interes en la cuenta de ingreso
                                         detalle = 'Intereses generados - '+ "${0:.2f}".format(apunte_previo.saldo_acumulado)
                                         detalle = detalle + ' x '+ str(diferencia.days) + ' x ('+str(self.tasa_interes)+'% mensual)'
                                         aml = {
-                                            'date': apunte.date,
+                                            'date': fecha_final,
                                             'account_id': self.subcuenta_id.journal_id.cuenta_ganancia_id.id,
                                             'name':  detalle,
                                             'partner_id': apunte.partner_id.id,
@@ -181,12 +220,13 @@ class formularioInteres(osv.Model):
                                         # create move line
                                         # Acredito el monto de intereses a la cuenta del cliente
                                         aml2 = {
-                                            'date': apunte.date,
+                                            'date': fecha_final,
                                             'account_id': apunte.account_id.id,
                                             'name': detalle,
                                             'partner_id': apunte.partner_id.id,
                                             'debit': interes,
                                             'subcuenta_id': apunte.subcuenta_id.id,
+                                            'saldo_acumulado': saldo_acumulado_nuevo,
                                         }
 
                                         line_ids = [(0, 0, aml), (0,0, aml2)]
@@ -195,7 +235,7 @@ class formularioInteres(osv.Model):
                                         move_name = "Intereses Generados/"
                                         move = self.env['account.move'].create({
                                             'name': move_name,
-                                            'date': apunte.date,
+                                            'date': fecha_final,
                                             'journal_id': self.subcuenta_id.journal_id.id,
                                             'state':'draft',
                                             'company_id': company_id,
@@ -211,16 +251,48 @@ class formularioInteres(osv.Model):
                 apunte.saldo_acumulado = apunte.debit - apunte.credit
 
             if i == count and apunte.date < self.fecha_hasta:
+                _logger.error("i == count")
+                _logger.error("Apunte actual: fecha: %r, debe: %r - haber: %r", apunte.date, apunte.debit, apunte.credit)
                 if apunte.saldo_acumulado > 0:
                     apunte.interes_generado = True
                     apuntes_calculados_ids.append(apunte.id)
-                    fecha_inicial_str = str(apunte.date)
-                    fecha_final_str = str(self.fecha_hasta)
-                    if fecha_inicial_str and len(fecha_inicial_str) > 0 and fecha_inicial_str != "False":
-                        if fecha_final_str and len(fecha_final_str) > 0 and fecha_final_str  != "False":
+                    fecha_inicial_str = False
+                    fecha_final_str = False
+                    if apunte.date != False:
+                        fecha_inicial_str = str(apunte.date)
+                    if self.fecha_hasta != False:
+                        fecha_final_str = str(self.fecha_hasta)
+                    if fecha_inicial_str != False:
+                        if fecha_final_str != False:
                             formato_fecha = "%Y-%m-%d"
                             fecha_inicial = datetime.strptime(fecha_inicial_str, formato_fecha)
                             fecha_final = datetime.strptime(fecha_final_str, formato_fecha)
+
+                            #Verificar si hay fecha de fin de mes entre las dos fechas
+                            ultimos_dias = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+                            ano_actual = fecha_inicial.year
+                            mes_actual = fecha_inicial.month
+                            dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                            if fecha_inicial.day == dia_actual_fin_de_mes:
+                                if mes_actual == 12:
+                                    mes_actual = 1
+                                    ano_actual = ano_actual + 1
+                                    dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                                else:
+                                    mes_actual = mes_actual + 1
+                                    dia_actual_fin_de_mes = ultimos_dias[mes_actual-1]
+                            fecha_fin_de_mes_str = str(ano_actual)+"-"+str(mes_actual)+"-"+str(dia_actual_fin_de_mes)
+                            fecha_fin_de_mes = datetime.strptime(fecha_fin_de_mes_str, formato_fecha)
+                            bandera_nuevo_asiento = False
+                            if fecha_fin_de_mes > fecha_inicial and fecha_fin_de_mes < fecha_final:
+                                _logger.error("FECHA ADD")
+                                fecha_final = fecha_fin_de_mes
+                                bandera_nuevo_asiento = True
+
+                            _logger.error("Fecha_inicial: %r", fecha_inicial_str)
+                            _logger.error("Fecha_final: %r", str(fecha_final))
+
+
                             diferencia = fecha_final - fecha_inicial
 
                             interes = apunte.saldo_acumulado * diferencia.days * self.tasa_interes / 30 / 100
@@ -231,7 +303,7 @@ class formularioInteres(osv.Model):
                             detalle = detalle + ' x '+str(diferencia.days) + ' x ('+str(self.tasa_interes)+'% mensual)'
 
                             aml = {
-                                'date': self.fecha_hasta,
+                                'date': fecha_final,
                                 'account_id': self.subcuenta_id.journal_id.cuenta_ganancia_id.id,
                                 'name': detalle,
                                 'partner_id': apunte.partner_id.id,
@@ -241,7 +313,7 @@ class formularioInteres(osv.Model):
                             # create move line
                             # Acredito el monto de intereses a la cuenta del cliente
                             aml2 = {
-                                'date': self.fecha_hasta,
+                                'date': fecha_final,
                                 'account_id': apunte.account_id.id,
                                 'name': detalle,
                                 'partner_id': apunte.partner_id.id,
@@ -255,14 +327,17 @@ class formularioInteres(osv.Model):
                             move_name = "Intereses Generados/"
                             move = self.env['account.move'].create({
                                 'name': move_name,
-                                'date': self.fecha_hasta,
+                                'date': fecha_final,
                                 'journal_id': self.subcuenta_id.journal_id.id,
-                                'state':'posted',
+                                'state':'draft',
                                 'company_id': company_id,
                                 'partner_id': apunte.partner_id.id,
                                 'line_ids': line_ids,
                             })
                             move_ids.append(move.id)
+                            if bandera_nuevo_asiento:
+                                apuntes_ids = self.subcuenta_id.apuntes_ids
+                                count = count + 1
             apunte_previo = apuntes_ids[count-i]
             i = i + 1
         if move_ids != None:
