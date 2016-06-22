@@ -23,27 +23,105 @@
         <field name="arch" type="xml">
             <form string="Pago o Cobro" editable="bottom">
                 <header>
-                    <button name="confirmar" states="borrador" string="Confirmar" type="object"/>
-                    <button name="registrar" states="confirmada" string="Regisrar" type="object"/>
+                    <button name="confirmar" string="Confirmar" states="borrador" type="object"/>
+                    <button name="registrar" string="Regisrar" states="confirmada"  type="object"/>
+                    <button name="cancelar" string="Cancelar" states="borrador,confirmada" type="object"/>
+                    <button name="editar" string="Editar" type="object"/>
                     <field name="state"  widget="statusbar"/>
                 </header>
-                <sheet>
+                <sheet col="4">
                     <group>
                         <field name="fecha" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+
                         <field name="tipo_de_pago" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="entidad_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="subcuenta_id" domain="[('subcuenta_id.id','=', entidad_id)]" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="efectivo" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="cuenta_efectivo_id" attrs="{'invisible': [('efectivo', '=', False)], 'readonly': [('state', '!=', 'borrador')], 'required': [('efectivo', '=', True)]}"/>
-                        <field name="monto_efectivo"  attrs="{'invisible': [('efectivo', '=', False)], 'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="cheques" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="cuenta_cheques_id" attrs="{'invisible': [('cheques', '=', False)], 'readonly': [('state', '!=', 'borrador')], 'required': [('cheques', '=', True)]}"/>
-                        <field name="cheques_ids" widget="many2many_tags" attrs="{'invisible': [('cheques', '=', False)], 'readonly': [('state', '!=', 'borrador')]}" />
-                        <field name="monto_en_cheques" attrs="{'invisible': [('cheques', '=', False)]}"/>
+
+                        <field name="journal_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+
+                        <field name="deposito_bancario" attrs="{'invisible': [('tipo_de_pago', '!=', 'enviarDinero')], 'readonly': [('state', '!=', 'borrador')]}"/>
+                    </group>
+
+                    <group>
+                        <field name="entidad_id" attrs="{'invisible': ['|', ('tipo_de_pago', '=', 'transferenciaContable'), ('deposito_bancario', '=', True)], 'required': [('tipo_de_pago', '!=', 'transferenciaContable'), ('deposito_bancario', '=', False)], 'readonly': [('state', '!=', 'borrador')]}"/>
+
+                        <field name="subcuenta_id" domain="[('subcuenta_id.id','=', entidad_id)]" attrs="{'invisible': ['|', ('tipo_de_pago', '=', 'transferenciaContable'), ('deposito_bancario', '=', True)], 'required': [('tipo_de_pago', '!=', 'transferenciaContable'), ('deposito_bancario', '=', False)], 'readonly': [('state', '!=', 'borrador')]}"/>
+                    </group>
+
+                    <group>
+                        <field name="entidad2_id" attrs="{'invisible': [('tipo_de_pago', '!=', 'transferenciaEntidad')], 'required': [('tipo_de_pago', '=', 'transferenciaEntidad')], 'readonly': [('state', '!=', 'borrador')]}"/>
+
+                        <field name="subcuenta2_id" domain="[('subcuenta_id.id','=', entidad2_id)]" attrs="{'invisible': [('tipo_de_pago', '!=', 'transferenciaEntidad')], 'required': [('tipo_de_pago', '=', 'transferenciaEntidad')], 'readonly': [('state', '!=', 'borrador')]}"/>
+                    </group>
+
+                    <group>
+                        <field name="cuenta_id" attrs="{'invisible': [('tipo_de_pago', '!=', 'transferenciaContable'), ('deposito_bancario', '=', False)], 'required': ['|', ('tipo_de_pago', '=', 'transferenciaContable'), ('deposito_bancario', '=', True)], 'readonly': [('state', '!=', 'borrador')]}"/>
+
+                        <field name="cuenta2_id" attrs="{'invisible': [('tipo_de_pago', '!=', 'transferenciaContable')], 'required': [('tipo_de_pago', '=', 'transferenciaContable')], 'readonly': [('state', '!=', 'borrador')]}"/>
+                    </group>
+                    <group>
+                        <field name="monto"  attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('tipo_de_pago', '=', 'recibirDinero'), ('tipo_de_pago', '=', 'enviarDinero')]}"/>
+
+                        <field name="efectivo" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('tipo_de_pago', '=', 'transferenciaContable'), ('tipo_de_pago', '=', 'transferenciaEntidad')]}" />
+
+                        <field name="monto_efectivo"  attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('efectivo', '=', False)]}"/>
+
+                        <field name="cheques" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('tipo_de_pago', '=', 'transferenciaContable'), ('tipo_de_pago', '=', 'transferenciaEntidad')]}" />
+                        
+                        <field name="enviar_cheques_ids" widget="many2many_tags" options="{'no_create': True}" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('cheques', '=', False), ('tipo_de_pago', '!=', 'enviarDinero')]}">
+                            <tree string="Cheques" delete="false">
+                                <field name="name"/>
+                                <field name="firmante_id"/>
+                                <field name="banco_id"/>
+                                <field name="importe" sum="Total"/>
+                                <field name="fecha_vencimiento"/>
+                            </tree>
+                            <form>
+                                <group readonly='1'>
+                                    <field name="name"/>
+                                    <field name="firmante_id"/>
+                                    <field name="banco_id"/>
+                                    <field name="importe"/>
+                                    <field name="fecha_vencimiento"/>
+                                </group>
+                            </form>
+                        </field>
+
+
+                        <field name="recibir_cheques_ids" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('cheques', '=', False), ('tipo_de_pago', '!=', 'recibirDinero')]}">
+                            <tree string="Cheques" editable="bottom" >
+                                <field name="name"/>
+                                <field name="firmante_id"/>
+                                <field name="banco_id"/>
+                                <field name="importe" sum="Total"/>
+                                <field name="fecha_vencimiento"/>
+                            </tree>
+                        </field>
+
+                        <field name="gastos" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('tipo_de_pago', '!=', 'enviarDinero')]}" />
+
+                        <field name="monto_gasto" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('gastos', '=', False)]}" />
+
+                        <field name="porcentaje_gasto" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('gastos', '=', False)]}" />
+
+                        <field name="cuenta_gastos_id" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('gastos', '=', False)]}" />
                     </group>
                     <notebook>
-                        <page name="asiento" string="Asiento">
-                            
+                        <page name="apuntes" string="Apuntes">
+                            <group>
+                                <field name="move_id" readonly="1" />
+                                <field name="state_move_id" readonly="1" />
+                            </group>
+                            <field name="move_line_ids">
+                                <tree name="movimientos">
+                                    <field name="date"/>
+                                    <field name="partner_id"/>
+                                    <field name="account_id"/>
+                                    <field name="name"/>
+                                    <field name="debit" sum="Total"/>
+                                    <field name="credit" sum="Total"/>
+                                    <field name="move_id"/>
+                                    <field name="journal_id"/>
+                                </tree>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>
@@ -58,7 +136,7 @@
         <field name="view_id" ref="transferencia_tree"/>
     </record>
 
-    <menuitem id="smenu_clientes_efectivo_action" name="Efectivo al cliente" parent="smenu_clientes" action="transferencia_action"  sequence="0" />
+    <menuitem id="smenu_generales_transferencias" name="Transferencia" parent="smenu_generales" action="transferencia_action" sequence="0" />
 
     </data>
 </openerp>

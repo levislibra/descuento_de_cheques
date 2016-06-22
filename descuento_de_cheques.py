@@ -137,7 +137,7 @@ class cheques_de_terceros(osv.Model):
 class descuento_de_cheques(osv.Model):
     _name = 'descuento.de.cheques'
     _description = 'liquidacion de cheques'
-    #_inherits = { 'res.partner' : 'subcuenta_ids'}
+
     _rec_name = 'id'
     _columns =  {
         'id': fields.integer('Nro liquidacion'),
@@ -145,6 +145,7 @@ class descuento_de_cheques(osv.Model):
         'active': fields.boolean('Activa'),
         'cliente_id': fields.many2one('res.partner', 'Cliente', required=True),
         'subcuenta_id': fields.many2one('subcuenta', 'Subcuenta', required=True),
+        #'subcuenta_id_descuento_de_cheques': fields.boolean('subcuenta', related='subcuenta_id.descuento_de_cheques', readonly=True, store=False),
         'journal_id': fields.many2one('account.journal', 'Diario', required=True),
         'move_id':fields.many2one('account.move', 'Asiento', readonly=True),
         'invoice_id':fields.many2one('account.invoice', 'Factura', readonly=True),
@@ -374,26 +375,28 @@ class descuento_de_cheques(osv.Model):
             'account_id': self.journal_id.cuenta_ganancia_id.id,
             }
 
-            account_invoice_customer0 = account_invoice_obj.sudo(self.env.uid).create(dict(
-                name=move_name,
-                date=self.fecha_liquidacion,
-                reference_type="none",
-                type="out_invoice",
-                reference=False,
-                #payment_term_id=self.payment_term.id,
-                journal_id=self.journal_id.id,
-                partner_id=self.cliente_id.id,
-                move_id=move.id,
-                #residual=self.gasto_interes_liquidacion,
-                #residual_company_signed=self.gasto_interes_liquidacion,
-                #residual_signed=self.gasto_interes_liquidacion,
-                account_id=self.cliente_id.property_account_receivable_id.id,
-                invoice_line_ids=[(0, 0, ail), (0, 0, ail2)]
-            ))
-            account_invoice_customer0.signal_workflow('invoice_open')
-            #account_invoice_customer0.reconciled = True
-            account_invoice_customer0.state = 'paid'
-            self.invoice_id = account_invoice_customer0.id
+            if False:
+                
+                account_invoice_customer0 = account_invoice_obj.sudo(self.env.uid).create(dict(
+                    name=move_name,
+                    date=self.fecha_liquidacion,
+                    reference_type="none",
+                    type="out_invoice",
+                    reference=False,
+                    #payment_term_id=self.payment_term.id,
+                    journal_id=self.journal_id.id,
+                    partner_id=self.cliente_id.id,
+                    move_id=move.id,
+                    #residual=self.gasto_interes_liquidacion,
+                    #residual_company_signed=self.gasto_interes_liquidacion,
+                    #residual_signed=self.gasto_interes_liquidacion,
+                    account_id=self.cliente_id.property_account_receivable_id.id,
+                    invoice_line_ids=[(0, 0, ail), (0, 0, ail2)]
+                ))
+                account_invoice_customer0.signal_workflow('invoice_open')
+                #account_invoice_customer0.reconciled = True
+                account_invoice_customer0.state = 'paid'
+                self.invoice_id = account_invoice_customer0.id
 
         return True
 

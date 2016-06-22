@@ -62,7 +62,7 @@
                         <field name="id"/>
                         <field name="fecha_liquidacion" attrs="{'readonly': [('state', '!=', 'cotizacion')]}" context="{'fecha_liquidacion': fecha_liquidacion}"/>
                         <field name="cliente_id" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
-                        <field name="subcuenta_id" domain="[('subcuenta_id.id','=', cliente_id)]" attrs="{'readonly': [('state', '!=', 'cotizacion')]}">
+                        <field name="subcuenta_id" domain="[('subcuenta_id.id','=', cliente_id), ('descuento_de_cheques','=', True)]" attrs="{'readonly': [('state', '!=', 'cotizacion')]}">
                             <form string="Subcuenta" editable="bottom">
                                 <header>
                                 </header>
@@ -124,34 +124,29 @@
     <!-- Menu Principal del modulo (barra superior) - Financiera -->
     <menuitem id="menu_financiera" name="Financiera" />
     
-    <!-- SubMenu 1 - Liquidaciones -->
+    <!-- SubMenu 0 - Liquidaciones -->
     <menuitem id="smenu_liquidaciones" name="Liquidaciones" parent="menu_financiera"  sequence="0" />
     <menuitem id="smenu_liquidaciones_action" name="Liquidaciones" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
 
-    <menuitem id="smenu_liquidaciones_configuracion_action" name="Configuracion" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
+    <menuitem id="smenu_liquidaciones_configuracion_action" name="Configuracion" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="1" />
+
+    <!-- SubMenu 1 - Transferencias -->
+    <menuitem id="smenu_generales" name="Generales" parent="menu_financiera"  sequence="1" />
 
     <!-- SubMenu 2 - Clientes -->
-    <menuitem id="smenu_clientes" name="Clientes" parent="menu_financiera"  sequence="0" />
-    <menuitem id="base.menu_partner_form" name="Clientes" parent="smenu_clientes" action="base.action_partner_form" sequence="0" />
+    <menuitem id="smenu_clientes" name="Clientes" parent="menu_financiera"  sequence="2" />
+    <menuitem id="smenu_clientes_action" name="Clientes" parent="smenu_clientes" action="base.action_partner_form" sequence="0" />
 
-    <menuitem id="smenu_clientes_intereses_action" name="Calcular intereses" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_clientes_configuracion_action" name="Configuracion" parent="smenu_clientes" action="liquidaciones_action"  sequence="0" />
+    <menuitem id="smenu_clientes_configuracion_action" name="Configuracion" parent="smenu_clientes" action="liquidaciones_action"  sequence="3" />
 
     <!-- SubMenu 3 - Proveedores -->
-    <menuitem id="smenu_proveedores" name="Proveedores" parent="menu_financiera"  sequence="0" />
-    <menuitem id="smenu_proveedores_action" name="Proveedores" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+    <menuitem id="smenu_proveedores" name="Proveedores" parent="menu_financiera"  sequence="3" />
+    <menuitem id="smenu_proveedores_action" name="Proveedores" parent="smenu_proveedores" action="base.action_partner_supplier_form" sequence="0" />
 
-    <menuitem id="smenu_proveedores_intereses_action" name="Calcular intereses" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
+    <menuitem id="smenu_proveedores_configuracion_action" name="Configuracion" parent="smenu_proveedores" action="liquidaciones_action"  sequence="1" />
 
-    <menuitem id="smenu_proveedores_pago_action" name="Pago a proveedor" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_proveedores_captarfondos_action" name="Captar fondos" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_proveedores_configuracion_action" name="Configuracion" parent="smenu_proveedores" action="liquidaciones_action"  sequence="0" />
-
-    <!-- SubMenu 3 - Prestamos Personales -->
-    <menuitem id="smenu_prestamos" name="Prestamos" parent="menu_financiera"  sequence="0" />
+    <!-- SubMenu 4 - Prestamos Personales -->
+    <menuitem id="smenu_prestamos" name="Prestamos" parent="menu_financiera"  sequence="4" />
     <menuitem id="smenu_prestamos_action" name="Prestamos" parent="smenu_prestamos" action="liquidaciones_action"  sequence="0" />
 
     </data>

@@ -122,23 +122,34 @@
         </field>
     </record>
 
-    <!-- Crear Subcuenta  -->
+    <!-- Tree Subcuenta  -->
     <record id="subcuenta_tree" model="ir.ui.view">
         <field name="name">Subcuenta</field>
         <field name="model">subcuenta</field>
         <field name="arch" type="xml">
-            <tree string="Subcuenta" editable="bottom">
-                <field name="name"/>
+            <tree string="Subcuenta">
                 <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')]}"/>
+                <field name="name"/>
+                <field name="saldo" sum="Total"/>
                 <field name="journal_id"/>
                 <field name="descuento_de_cheques"/>
                 <field name="prestamos"/>
                 <field name="tasa_fija_descuento"/>
                 <field name="tasa_mensual_descuento"/>
                 <field name="tasa_descubierto"/>
+                <field name="state"/>
             </tree>
         </field>
     </record>
+
+    <record id="subcuenta_action" model="ir.actions.act_window">
+        <field name="name">Subcuentas</field>
+        <field name="res_model">subcuenta</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="subcuenta_tree"/>
+    </record>
+
+    <menuitem id="smenu_generales_subcuentas" name="Subcuentas" parent="smenu_generales" action="subcuenta_action" sequence="1" />
 
 
 
