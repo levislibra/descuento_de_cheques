@@ -258,7 +258,7 @@ class descuento_de_cheques(osv.Model):
             # Acredito el monto total de los cheques al cliente
             aml2 = {
                 'date': self.fecha_liquidacion,
-                'account_id': self.cliente_id.property_account_receivable_id.id,
+                'account_id': self.subcuenta_id.account_id.id,
                 'name': descuento_name + ' - Acredito bruto de cheques',
                 'partner_id': self.cliente_id.id,
                 'credit': self.bruto_liquidacion,
@@ -271,7 +271,7 @@ class descuento_de_cheques(osv.Model):
                 # Debito el monto de intereses al cliente
                 aml3 = {
                     'date': self.fecha_liquidacion,
-                    'account_id': self.cliente_id.property_account_receivable_id.id,
+                    'account_id': self.subcuenta_id.account_id.id,
                     'name': descuento_name + ' - Intereses',
                     'partner_id': self.cliente_id.id,
                     'debit': self.interes_liquidacion,
@@ -287,7 +287,7 @@ class descuento_de_cheques(osv.Model):
                 # Debito el monto de gastos al cliente
                 aml4 = {
                     'date': self.fecha_liquidacion,
-                    'account_id': self.cliente_id.property_account_receivable_id.id,
+                    'account_id': self.subcuenta_id.account_id.id,
                     'name': descuento_name + ' - Impuesto a los debitos y creditos',
                     'partner_id': self.cliente_id.id,
                     'debit': self.gasto_liquidacion,
@@ -318,7 +318,7 @@ class descuento_de_cheques(osv.Model):
                 # Debito el monto de efectivo entregado al cliente
                 aml6 = {
                     'date': self.fecha_liquidacion,
-                    'account_id': self.cliente_id.property_account_receivable_id.id,
+                    'account_id': self.subcuenta_id.account_id.id,
                     'name': descuento_name + ' - Efectivo al cliente',
                     'partner_id': self.cliente_id.id,
                     'debit': self.efectivo_al_cliente,
@@ -376,7 +376,7 @@ class descuento_de_cheques(osv.Model):
             }
 
             if False:
-                
+
                 account_invoice_customer0 = account_invoice_obj.sudo(self.env.uid).create(dict(
                     name=move_name,
                     date=self.fecha_liquidacion,
@@ -390,7 +390,7 @@ class descuento_de_cheques(osv.Model):
                     #residual=self.gasto_interes_liquidacion,
                     #residual_company_signed=self.gasto_interes_liquidacion,
                     #residual_signed=self.gasto_interes_liquidacion,
-                    account_id=self.cliente_id.property_account_receivable_id.id,
+                    account_id=self.subcuenta_id.account_id.id,
                     invoice_line_ids=[(0, 0, ail), (0, 0, ail2)]
                 ))
                 account_invoice_customer0.signal_workflow('invoice_open')

@@ -108,7 +108,7 @@ class transferencia(osv.Model):
     }
 
     @api.onchange('tipo_de_pago')
-    def _reiniciar_subcuenta_id(self):
+    def _reiniciar_formulario(self):
         _logger.error("tipo_de_pago onchange")
         self.journal_id = False
         self.deposito_bancario = False
@@ -159,10 +159,13 @@ class transferencia(osv.Model):
                 account_id = self.cuenta_id
                 subcuenta_id = False
                 partner_id = False
+                cheque_state = 'depositado'
             else:
-                account_id = self.entidad_id.property_account_receivable_id
+                account_id = self.subcuenta_id.account_id
+                #entidad_id.property_account_receivable_id
                 subcuenta_id = self.subcuenta_id.id
                 partner_id = self.entidad_id.id
+                cheque_state = 'enpago'
 
             _logger.error("enviarDinero")
             if self.efectivo == True:
@@ -195,6 +198,7 @@ class transferencia(osv.Model):
                 for cheque in self.enviar_cheques_ids:
                     _logger.error("cheque: %r", cheque.importe)
                     monto_en_cheques += cheque.importe
+                    cheque.state = cheque_state
 
                     # create move line
                     # Monto y detalle del cheque en la cuenta receptora o cuenta donde se deposito
@@ -326,7 +330,7 @@ class transferencia(osv.Model):
                     # Registro el monto de efectivo entregado por la entidad
                     aml2 = {
                         'date': self.fecha,
-                        'account_id': self.entidad_id.property_account_receivable_id.id,
+                        'account_id': self.subcuenta_id.account_id.id,
                         'name': 'Efectivo - '+ self.journal_id.cuenta_caja_id.name,
                         'partner_id': self.entidad_id.id,
                         'credit': self.monto_efectivo,
@@ -335,11 +339,13 @@ class transferencia(osv.Model):
                     line_ids.append((0,0,aml2))
             if self.cheques == True:
                 for cheque in self.recibir_cheques_ids:
+
+                    cheque.state = 'draft'
                     # create move line
                     # Monto y detalle del cheque en la cuenta emisora
                     amlfor = {
                         'date': self.fecha,
-                        'account_id': self.entidad_id.property_account_receivable_id.id,
+                        'account_id': self.subcuenta_id.account_id.id,
                         'name': 'Banco '+ cheque.banco_id.name+' Nro '+cheque.name,
                         'partner_id': self.entidad_id.id,
                         'credit': cheque.importe,
@@ -378,18 +384,116 @@ class transferencia(osv.Model):
 
 
         if self.tipo_de_pago == 'transferenciaEntidad':
-            pass
+            _logger.error("transferenciaEntidad!!!")
+            #inicializacion
+            line_ids = []
+            # create move line
+            # Registro el monto en efectivo que sale de caja
+            aml = {
+                'date': self.fecha,
+                'account_id': self.subcuenta_id.account_id.id,
+                'name': 'Transferencia - destino: '+ self.entidad2_id.name + ' subcuenta: '+self.subcuenta2_id.name,
+                'partner_id': self.entidad_id.id,
+                'credit': self.monto,
+                'subcuenta_id': self.subcuenta_id.id,
+            }
+            line_ids.append((0,0,aml))
+            _logger.error("aml: %r", aml)
+
+            # create move line
+            # Registro el monto de efectivo entregado a la entidad o depositado
+            aml2 = {
+                'date': self.fecha,
+                'account_id': self.subcuenta2_id.account_id.id,
+                'name': 'Transferencia - origen: '+ self.entidad_id.name + ' subcuenta: '+self.subcuenta_id.name,
+                'partner_id': self.entidad2_id.id,
+                'debit': self.monto,
+                'subcuenta_id': self.subcuenta2_id.id,
+            }
+            line_ids.append((0,0,aml2))
+            _logger.error("aml: %r", aml2)
+
+            # create move
+            move_name = 'Transferencia - Entre entidades/'+str(self.id)
+            move = self.env['account.move'].create({
+                'name': move_name,
+                'ref': move_name,
+                'date': self.fecha,
+                'journal_id': self.journal_id.id,
+                'state':'draft',
+                'company_id': company_id,
+                'partner_id': self.entidad_id.id,
+                'line_ids': line_ids,
+            })
+            _logger.error("move: %r", move)
+            #move.state = 'posted'
+            self.move_id = move.id
+            self.state_move_id = move.state
+            self.subcuenta_id._actualizar_saldo_acumulado()
+            self.subcuenta2_id._actualizar_saldo_acumulado()
+
 
 
         if self.tipo_de_pago == 'transferenciaContable':
-            pass
+            _logger.error("transferenciaContable!!!")
+            #inicializacion
+            line_ids = []
+            # create move line
+            # Registro el monto en efectivo que sale de caja
+            aml = {
+                'date': self.fecha,
+                'account_id': self.cuenta_id.id,
+                'name': 'Transferencia - destino: '+ self.cuenta2_id.name,
+                'credit': self.monto,
+            }
+            line_ids.append((0,0,aml))
+            _logger.error("aml: %r", aml)
 
-    def registrar(self, cr, uid, ids, context=None):
-        _logger.error("self1: %r", self)
-        self.write(cr, uid, ids, {'state':'registrada'}, context=None)
+            # create move line
+            # Registro el monto de efectivo entregado a la entidad o depositado
+            aml2 = {
+                'date': self.fecha,
+                'account_id': self.cuenta2_id.id,
+                'name': 'Transferencia - origen: '+ self.cuenta_id.name,
+                'debit': self.monto,
+            }
+            line_ids.append((0,0,aml2))
+            _logger.error("aml: %r", aml2)
+
+            # create move
+            move_name = 'Transferencia - Contable/'+str(self.id)
+            move = self.env['account.move'].create({
+                'name': move_name,
+                'ref': move_name,
+                'date': self.fecha,
+                'journal_id': self.journal_id.id,
+                'state':'draft',
+                'company_id': company_id,
+                'line_ids': line_ids,
+            })
+            _logger.error("move: %r", move)
+            #move.state = 'posted'
+            self.move_id = move.id
+            self.state_move_id = move.state
+
+    @api.multi
+    def registrar(self, cr):
+        _logger.error("registraar: %r", self)
+        self.state = 'registrada'
+        self.move_id.state = 'posted'
+        self.state_move_id = 'posted'
+        for cheque in self.recibir_cheques_ids:
+            cheque.state = 'en_cartera'
         return True
 
-    def cancelar(self, cr, uid, ids, context=None):
-        _logger.error("self2: %r", self)
-        self.write(cr, uid, ids, {'state':'cancelada'}, context=None)
+    @api.multi
+    def cancelar(self, cr):
+        _logger.error("cancelar: %r", self)
+        self.state = 'cancelada'
+        self.move_id.unlink()
+        self.state_move_id = 'deleted'
+        for cheque in self.recibir_cheques_ids:
+            cheque.unlink()
+        for cheque in self.enviar_cheques_ids:
+            cheque.state = 'en_cartera'
         return True

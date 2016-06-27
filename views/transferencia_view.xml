@@ -25,7 +25,7 @@
                 <header>
                     <button name="confirmar" string="Confirmar" states="borrador" type="object"/>
                     <button name="registrar" string="Regisrar" states="confirmada"  type="object"/>
-                    <button name="cancelar" string="Cancelar" states="borrador,confirmada" type="object"/>
+                    <button name="cancelar" string="Cancelar" states="confirmada" type="object"/>
                     <button name="editar" string="Editar" type="object"/>
                     <field name="state"  widget="statusbar"/>
                 </header>
@@ -66,7 +66,7 @@
 
                         <field name="cheques" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('tipo_de_pago', '=', 'transferenciaContable'), ('tipo_de_pago', '=', 'transferenciaEntidad')]}" />
                         
-                        <field name="enviar_cheques_ids" widget="many2many_tags" options="{'no_create': True}" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('cheques', '=', False), ('tipo_de_pago', '!=', 'enviarDinero')]}">
+                        <field name="enviar_cheques_ids" domain="[('state','=', 'en_cartera')]" widget="many2many_tags" options="{'no_create': True}" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': ['|', ('cheques', '=', False), ('tipo_de_pago', '!=', 'enviarDinero')]}">
                             <tree string="Cheques" delete="false">
                                 <field name="name"/>
                                 <field name="firmante_id"/>
@@ -102,7 +102,7 @@
 
                         <field name="porcentaje_gasto" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('gastos', '=', False)]}" />
 
-                        <field name="cuenta_gastos_id" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('gastos', '=', False)]}" />
+                        <field name="cuenta_gastos_id" attrs="{'readonly': [('state', '!=', 'borrador')], 'invisible': [('gastos', '=', False)], 'required': [('gastos', '=', True)]}" />
                     </group>
                     <notebook>
                         <page name="apuntes" string="Apuntes">
@@ -136,7 +136,7 @@
         <field name="view_id" ref="transferencia_tree"/>
     </record>
 
-    <menuitem id="smenu_generales_transferencias" name="Transferencia" parent="smenu_generales" action="transferencia_action" sequence="0" />
+    <menuitem id="smenu_generales_transferencias" name="Pagos/Cobros/Depositos/Transferencia" parent="smenu_generales" action="transferencia_action" sequence="0" />
 
     </data>
 </openerp>

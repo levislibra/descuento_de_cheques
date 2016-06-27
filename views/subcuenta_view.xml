@@ -91,6 +91,7 @@
                         <field name="name" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                         <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')], 'readonly': [('state', '!=', 'borrador')]}"/>
                         <field name="journal_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="account_id" domain="['|', ('internal_type','=', 'receivable'), ('internal_type','=', 'payable'), ('deprecated', '=', False)]" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                         <field name="descuento_de_cheques"/>
                         <field name="prestamos"/>
                         <field name="tasa_fija_descuento"/>
@@ -131,6 +132,7 @@
                 <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')]}"/>
                 <field name="name"/>
                 <field name="saldo" sum="Total"/>
+                <field name="account_id"/>
                 <field name="journal_id"/>
                 <field name="descuento_de_cheques"/>
                 <field name="prestamos"/>

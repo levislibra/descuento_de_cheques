@@ -435,6 +435,7 @@ class subcuenta(osv.Model):
         'name': fields.char('Nombre', required=True),
         'subcuenta_id': fields.many2one('res.partner', 'Cliente'),
         'journal_id': fields.many2one('account.journal', 'Diario', required=True),
+        'account_id': fields.many2one('account.account', 'Plan contable', required=True),
         'descuento_id': fields.many2one('descuento.de.cheques', 'Descuento'),
         'descuento_de_cheques': fields.boolean('Permite descuento de cheques'),
         'prestamos': fields.boolean('Permite prestamos'),
