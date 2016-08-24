@@ -2,77 +2,72 @@
 <openerp>
     <data>
 
-    <!-- formulario Intereses - Formulario de creacion -->
-
-    <record id="formulario_intereses_tree" model="ir.ui.view">
-        <field name="name">Formulario Intereses Tree</field>
-        <field name="model">formulario.interes</field>
+    <record id="inherit_account_move_line_tree" model="ir.ui.view">
+        <field name="name">inherits.account.move.line.tree</field>
+        <field name="model">account.move.line</field>
+        <field name="type">tree</field>
         <field name="arch" type="xml">
-            <tree string="Formularios Intereses">
-                <field name="tipo"/>
-                <field name="tasa_interes"/>
-                <field name="fecha_hasta"/>
-                <button name="generar_intereses" states="pendiente" string="Generar Intereses" type="object"/>
-                <field name="state"/>
+            <tree string="Movimientos">
+                <field name="date"/>
+                <field name="subcuenta_id"/>
+                <field name="name"/>
+                <field name="debit" sum="Total Debito"/>
+                <field name="credit" sum="Total Credito"/>
+                <field name="monto_interes" sum="Total Intereses"/>
+                <field name="saldo"/>
+                <field name="dias"/>
+                <field name="tasa_descubierto"/>
+                <field name="interes_generado"/>
+                <field name="interes_fijo"/>
             </tree>
         </field>
     </record>
 
-    <record id="formulario_intereses_form" model="ir.ui.view">
-        <field name="name">Formulario Intereses Form</field>
-        <field name="model">formulario.interes</field>
+    <act_window
+    id="opciones_subcuenta_action"
+    name="Opciones con movimientos"
+    res_model="form.opciones.subcuenta.move.line"
+    src_model="account.move.line"
+    view_mode="form"
+    multi="False"
+    target="new"
+    key2="client_action_multi"/>
+
+    <!-- Form - form.opciones.subcuenta.move.line  -->
+
+    <record id="form_opciones_subcuenta_move_line_form" model="ir.ui.view">
+        <field name="name">form.opciones.subcuenta.move.line</field>
+        <field name="model">form.opciones.subcuenta.move.line</field>
         <field name="arch" type="xml">
-            <form string="Formulario de intereses" editable="bottom">
+            <form string="Opciones">
                 <header>
-                    <button name="generar_intereses_confirmar" states="borrador" string="Confirmar intereses" type="object"/>
-                    <button name="generar_intereses_cancelar" states="borrador,confirmado" string="Cancelar intereses" type="object"/>
-                    <field name="state"  widget="statusbar"/>
+                    <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
-                        <field name="tipo" attrs="{'readonly': [('state', '=', 'borrador'), ('state', '=', 'confimado'), ('state', '=', 'cancelado')]}"/>
-                        <field name="tasa_interes" attrs="{'readonly': [('state', '=', 'borrador'), ('state', '=', 'confimado'), ('state', '=', 'cancelado')]}"/>
-                        <field name="fecha_hasta" attrs="{'readonly': [('state', '=', 'borrador'), ('state', '=', 'confimado'), ('state', '=', 'cancelado')]}"/>
+                        <field name="cambiar_tasa"/>
+                        <field name="tasa_de_interes" attrs="{'invisible': [('cambiar_tasa', '=', False)]}"/>
+
+                        <field name="fijar_monto_de_interes"/>
+                        <field name="monto_interes" attrs="{'invisible': [('fijar_monto_de_interes', '=', False)]}"/>
+
+                        <field name="crear_movimiento"/>
+                        <field name="fecha_movimiento" attrs="{'invisible': [('crear_movimiento', '=', False)]}"/>
+
+                        <field name="asentar_interes"/>
+                        <field name="journal_intereses_id" attrs="{'invisible': [('asentar_interes', '=', False)]}"/>
+
+                        <field name="cambiar_subcuenta"/>
+                        <field name="cuenta_entidad_id" invisible="1" />
+                        <field name="subcuenta_destino_id" domain="[('cuenta_entidad_id.id', '=', cuenta_entidad_id)]" attrs="{'invisible': [('cambiar_subcuenta', '=', False)]}"/>
+
                     </group>
-                    <notebook>
-                        <page name="intereses" string="Asintos Generados">
-                            <field name="asientos_ids"/>
-                        </page>
-                        <page name="apuntes_calculados" string="Apuntes calculados">
-                            <field name="apuntes_calculados_ids"/>
-                        </page>
-                    </notebook>
                 </sheet>
+                <footer>
+                        <button string='Validate' states="borrador" name="validar" type="object" class="btn-primary"/>
+                        <button string="Cancel" states="borrador" class="btn-default" special="cancel"/>
+                </footer>
             </form>
-        </field>
-    </record>
-
-        <!-- Herencia partner - agregamos campos  -->
-
-    <record id="inherit_res_partner_subcuentas" model="ir.ui.view">
-        <field name="name">Subcuentas res.partner</field>
-        <field name="model">res.partner</field>
-        <field name="type">form</field>
-        <field name="inherit_id" ref="base.view_partner_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//button[@name='toggle_active']" position='after'>
-                <button name="ver_subcuentas" type="object" class="oe_stat_button" icon="fa-archive" string="Subcuentas"  widget="boolean_button" options="{&quot;terminology&quot;: &quot;archive&quot;}"/>
-            </xpath>
-            <xpath expr="//page[@name='internal_notes']" position='after'>
-                <page name="subcuentas" string="Subcuentas">
-                    <field name="subcuenta_ids">
-                        <tree string="Subcuentas" editable="bottom" >
-                            <field name="name"/>
-                            <field name="saldo" sum="Total"/>
-                            <field name="descuento_de_cheques"/>
-                            <field name="prestamos"/>
-                            <field name="tasa_fija_descuento"/>
-                            <field name="tasa_mensual_descuento"/>
-                            <field name="tasa_descubierto"/>
-                        </tree>
-                    </field>
-                </page>
-            </xpath>
         </field>
     </record>
 
@@ -89,33 +84,31 @@
                 <sheet>
                     <group>
                         <field name="name" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')], 'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="journal_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                        <field name="account_id" domain="['|', ('internal_type','=', 'receivable'), ('internal_type','=', 'payable'), ('deprecated', '=', False)]" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="tipo" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="cuenta_entidad_id" attrs="{'required': [('state', '=', 'borrador')], 'readonly': [('state', '!=', 'borrador')]}"/>
+                        <!--<field name="journal_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        <field name="account_id" domain="['|', ('internal_type','=', 'receivable'), ('internal_type','=', 'payable'), ('deprecated', '=', False)]" attrs="{'readonly': [('state', '!=', 'borrador')]}"/> -->
                         <field name="descuento_de_cheques"/>
-                        <field name="prestamos"/>
-                        <field name="tasa_fija_descuento"/>
-                        <field name="tasa_mensual_descuento"/>
-                        <field name="tasa_descubierto"/>
+                        <field name="tasa_mensual_pagada" attrs="{'invisible': [('tipo', '=', 'activo')]}"/>
+                        <field name="tasa_fija_descuento" attrs="{'invisible': [('tipo', '=', 'pasivo')]}"/>
+                        <field name="tasa_mensual_descuento" attrs="{'invisible': [('tipo', '=', 'pasivo')]}"/>
+                        <field name="tasa_descubierto" attrs="{'invisible': [('tipo', '=', 'pasivo')]}"/>
                     </group>
                     <notebook>
                         <page name="Movimientos" string="Movimientos">
                             <button name="button_actualizar_saldo_acumulado" string="Actualizar Cuenta" type="object" />
-                            <field name="apuntes_ids" attrs="{'readonly': [('state', '!=', 'borrador')]}">
+                            <field name="apuntes_ids" readonly="1">
                                 <tree name="movimientos">
                                     <field name="date"/>
                                     <field name="name"/>
                                     <field name="debit" sum="Total"/>
                                     <field name="credit" sum="Total"/>
-                                    <field name="saldo_acumulado"/>
+                                    <field name="sub_saldo"/>
                                     <field name="move_id"/>
                                     <field name="journal_id"/>
                                     <field name="interes_generado"/>
                                 </tree>
                             </field>
-                        </page>
-                        <page name="intereses" string="Intereses Generados">
-                            <field name="formulario_interes_ids"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -128,14 +121,12 @@
         <field name="name">Subcuenta</field>
         <field name="model">subcuenta</field>
         <field name="arch" type="xml">
-            <tree string="Subcuenta">
-                <field name="subcuenta_id" attrs="{'required': [('state', '=', 'borrador')]}"/>
+            <tree string="Subcuenta" delete="false">
+                <field name="cuenta_entidad_id"/>
                 <field name="name"/>
                 <field name="saldo" sum="Total"/>
-                <field name="account_id"/>
                 <field name="journal_id"/>
                 <field name="descuento_de_cheques"/>
-                <field name="prestamos"/>
                 <field name="tasa_fija_descuento"/>
                 <field name="tasa_mensual_descuento"/>
                 <field name="tasa_descubierto"/>

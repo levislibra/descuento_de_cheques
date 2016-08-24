@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+    <!-- Cuenta Entidad - Formulario de creacion 
+
+    <act_window name="Sub-Cuentas"
+    res_model="account.move.line"
+    src_model="cuenta.entidad"
+    key2="client_action_multi"
+    view_mode="tree" target="current"
+    view_id="inherit_account_move_line_tree"
+    id="subcuentas_action"
+    domain="[('subcuenta_id.cuenta_entidad_id', '=', active_id)]"/>
+-->
+    <record id="plazo_fijo_tree" model="ir.ui.view">
+        <field name="name">plazo.fijo.tree</field>
+        <field name="model">plazo.fijo</field>
+        <field name="arch" type="xml">
+            <tree string="Plazo Fijo"  delete="false">
+                <field name="fecha"/>
+                <field name="cuenta_entidad_id"/>
+                <field name="display_name"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="plazo_fijo_form" model="ir.ui.view">
+        <field name="name">plazo.fijo.form</field>
+        <field name="model">plazo.fijo</field>
+        <field name="arch" type="xml">
+            <form string="Plazo Fijo">
+                <header>
+                    <button name="hola" string="Generar" states="borrador,generado" type="object"/>
+                    <button name="editar" string="Editar" states="generado" type="object"/>
+                    <button name="confirmar" string="Confirmar" states="generado" type="object"/>
+                    <field name="state"  widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="fecha" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="display_name"/>
+                            <field name="cuenta_entidad_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        </group>
+                        <group>
+                            <field name="journal_cobro_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="move_capital_id"/>
+                            <field name="monto" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="tasa_pasiva" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="cuotas" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="fecha_primer_vencimiento" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="respetar_dias_primer_vencimiento" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        </group>
+                        <group>
+                            <button name="pagar_cuota" string="Pagar" states="pendiente" type="object"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="cuotas_ids" string="Cuotas">
+                            <field name="cuotas_ids">
+                                <tree name="cuotas" string="Cuotas" delete="false">
+                                    <field name="fecha"/>
+                                    <field name="display_name"/>
+                                    <field name="monto" sum="Total"/>
+                                    <field name="detalle"/>
+                                    <field name="fecha_de_pago"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="plazos_fijos_action" model="ir.actions.act_window">
+        <field name="name">Plazos Fijos</field>
+        <field name="res_model">plazo.fijo</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="plazo_fijo_tree"/>
+    </record>
+
+    <!-- Cuota -->
+
+    <record id="plazo_fijo_cuota_tree" model="ir.ui.view">
+        <field name="name">plazo.fijo.cuota.tree</field>
+        <field name="model">plazo.fijo.cuota</field>
+        <field name="arch" type="xml">
+            <tree string="Cuotas">
+                <field name="fecha"/>
+                <field name="plazo_fijo_id"/>
+                <field name="display_name"/>
+                <field name="monto" sum="Total"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="plazo_fijo_cuota_form" model="ir.ui.view">
+        <field name="name">plazo.fijo.cuota.form</field>
+        <field name="model">plazo.fijo.cuota</field>
+        <field name="arch" type="xml">
+            <form string="Cuota">
+                <header>
+                    <button name="pagar" string="Pagar" states="pendiente" type="object"/>
+                    <field name="state"  widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="fecha" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="plazo_fijo_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="display_name"/>
+                            <field name="monto" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        </group>
+                        <group>
+                            <field name="journal_intereses_id" attrs="{'readonly': [('state', '=', 'pagada')], 'required': [('state', '=', 'pendiente')]}"/>
+                            <field name="move_cuota_id"/>
+                            <field name="journal_pago_id" attrs="{'readonly': [('state', '=', 'pagada')], 'required': [('state', '=', 'pendiente')]}"/>
+                            <field name="fecha_de_pago" attrs="{'readonly': [('state', '=', 'pagada')], 'required': [('state', '=', 'pendiente')]}"/>
+                            <field name="move_pago_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="plazos_fijos_cuota_action" model="ir.actions.act_window">
+        <field name="name">Cuotas</field>
+        <field name="res_model">plazo.fijo.cuota</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="plazo_fijo_cuota_tree"/>
+    </record>
+
+    <!-- SubMenu 4 - Cuentas -->
+    <menuitem id="smenu_plazos_fijos" name="Plazos Fijos" parent="menu_financiera"  sequence="4" />
+    <menuitem id="smenu_plazos_fijos_action" name="Plazos Fijos" parent="smenu_plazos_fijos" action="plazos_fijos_action"  sequence="0" />
+
+    <menuitem id="smenu_plazos_fijos_cuota_action" name="Intereses a pagar" parent="smenu_plazos_fijos" action="plazos_fijos_cuota_action"  sequence="0" />
+
+    </data>
+</openerp>

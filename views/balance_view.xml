@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+    <!-- Tree balance  -->
+    <record id="balance_tree" model="ir.ui.view">
+        <field name="name">balance.inherits.tree</field>
+        <field name="model">account.account</field>
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Balances">
+                <field name="code"/>
+                <button type="action"
+                    class="oe_stat_button"
+                    id="button_movimientos_action"
+                    icon="fa-pencil-square-o"
+                    name="%(movimientos_action)d"
+                    string="Ver movimientos"
+                />
+                <button type="object"
+                    id="button_actualizar_saldo_action"
+                    name="hola"
+                    string="Actualizar"
+                />
+                <field name="name"/>
+                <field name="user_type_id"/>
+                <field name="saldo" sum="Total"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form balance  -->
+    <record id="balance_form" model="ir.ui.view">
+        <field name="name">balance.inherits.form</field>
+        <field name="model">account.account</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Balances">
+                <header>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name" widget="link" style="font-size:20px;"/>
+                        <field name="code"/>
+                        <field name="user_type_id"/>
+                        <field name="saldo"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="balance_action" model="ir.actions.act_window">
+        <field name="name">Balances y Saldos</field>
+        <field name="res_model">account.account</field>
+        <field name="view_type">form</field>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="balance_tree"/>
+    </record>
+
+    <!-- account.move.line -->
+    <record id="movimientos_tree" model="ir.ui.view">
+        <field name="name">movimientos.tree</field>
+        <field name="model">account.move.line</field>
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Movimientos">
+                <field name="date"/>
+                <field name="subcuenta_id"/>
+                <field name="name"/>
+                <field name="debit" sum="Total Debito"/>
+                <field name="credit" sum="Total Credito"/>
+                <field name="saldo"/>
+            </tree>
+        </field>
+    </record>
+
+    <act_window name="Movimientos"
+    res_model="account.move.line"
+    src_model="account.account"
+    key2="client_action_multi"
+    view_mode="tree" target="current"
+    view_id="movimientos_tree"
+    id="movimientos_action"
+    domain="[('account_id', '=', active_id)]"/>
+
+    <menuitem id="smenu_balance" name="Balances" parent="menu_financiera" />
+    <menuitem id="smenu_balance_action" name="Balances" parent="smenu_balance" action="balance_action" sequence="1" />
+
+    </data>
+</openerp>

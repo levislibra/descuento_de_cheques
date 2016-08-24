@@ -3,3 +3,6 @@
 
 import subcuenta
 import transferencia
+import cuenta_entidad
+import plazo_fijo
+import balance

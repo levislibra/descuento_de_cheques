@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+    <!-- Cuenta Entidad - Formulario de creacion -->
+
+    <act_window name="Sub-Cuentas"
+    res_model="account.move.line"
+    src_model="cuenta.entidad"
+    key2="client_action_multi"
+    view_mode="tree" target="current"
+    view_id="inherit_account_move_line_tree"
+    id="subcuentas_action"
+    domain="[('subcuenta_id.cuenta_entidad_id', '=', active_id)]"/>
+
+    <record id="cuenta_entidad_tree" model="ir.ui.view">
+        <field name="name">cuenta.entidad.tree</field>
+        <field name="model">cuenta.entidad</field>
+        <field name="arch" type="xml">
+            <tree string="Cuentas">
+                <field name="fecha"/>
+                <field name="display_name"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="cuenta_entidad_form" model="ir.ui.view">
+        <field name="name">cuenta.entidad.form</field>
+        <field name="model">cuenta.entidad</field>
+        <field name="arch" type="xml">
+            <form string="Ceuntas">
+                <header>
+                    <button name="confirmar" string="Confirmar" states="borrador" type="object"/>
+                    <button name="editar" string="Editar" states="confirmada" type="object"/>
+                    <field name="state"  widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div name="button_box" position="inside" align="right">
+                        <button type="action"
+                            class="oe_stat_button"
+                            id="subcuentas"
+                            icon="fa-pencil-square-o"
+                            name="%(subcuentas_action)d">
+                            <div class="o_form_field o_stat_info">
+                                <span class="o_stat_value">
+                                </span>
+                                <span class="o_stat_text">Sub-Cuentas</span>
+                            </div>
+                        </button>
+                    </div>
+                    <group>
+                        <field name="fecha" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                    </group>
+                    <group>
+                        <group string="Cuenta">
+                            <field name="display_name"/>
+                            <field name="entidad_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        </group>
+                        <group string="Contabilidad">
+                            <field name="account_cobrar_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="account_pagar_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="subcuentas" string="Sub-Cuentas">
+                            <field name="subcuentas_ids">
+                                <tree name="subcuentas" string="Subcuentas" delete="false">
+                                    <field name="name"/>
+                                    <field name="tipo"/>
+                                </tree>
+                                <form>
+                                    <group>
+                                        <field name="name"/>
+                                        <field name="tipo"/>
+                                        <field name="descuento_de_cheques"/>
+                                        <field name="tasa_mensual_pagada" attrs="{'invisible': [('tipo', '=', 'activo')]}"/>
+                                        <field name="tasa_fija_descuento" attrs="{'invisible': [('tipo', '=', 'pasivo')]}"/>
+                                        <field name="tasa_mensual_descuento" attrs="{'invisible': [('tipo', '=', 'pasivo')]}"/>
+                                        <field name="tasa_descubierto" attrs="{'invisible': [('tipo', '=', 'pasivo')]}"/>
+                                        <button name="button_actualizar_saldo_acumulado" string="Actualizar Cuenta" type="object" />
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+                        <page name="liquidaciones" string="Liquidaciones">
+                            <field name="descuento_de_cheques_ids"/>
+                        </page>
+                        <page name="plazo_fijo" string="Plazos Fijos">
+                            <field name="plazos_fijos_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="cuenta_entidad_action" model="ir.actions.act_window">
+        <field name="name">Cuenta</field>
+        <field name="res_model">cuenta.entidad</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="cuenta_entidad_tree"/>
+    </record>
+
+    <!-- SubMenu 0 - Cuentas -->
+    <menuitem id="smenu_cuentas" name="Cuentas" parent="menu_financiera"  sequence="0" />
+    <menuitem id="smenu_cuentas_action" name="Cuentas" parent="smenu_cuentas" action="cuenta_entidad_action"  sequence="0" />
+
+    </data>
+</openerp>
