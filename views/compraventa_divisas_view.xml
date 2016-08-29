@@ -1,0 +1,154 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+    <!-- Tree compraventa_divisas  -->
+    <record id="compraventa_divisas_tree" model="ir.ui.view">
+        <field name="name">compraventa.divisas.tree</field>
+        <field name="model">compraventa.divisas</field>
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Compra-Venta">
+                <field name="id"/>
+                <field name="fecha"/>
+                <field name="cuenta_entidad_id"/>
+                <field name="operacion"/>
+                <field name="journal_moneda_secundaria_id"/>
+                <field name="monto"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="compraventa_divisas_pago_form" model="ir.ui.view">
+        <field name="name">compraventa.divisas.pago.form</field>
+        <field name="model">compraventa.divisas.pago</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Compra-Venta">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="fecha" required="1"/>
+                        <field name="journal_moneda_principal_id" required="1"/>
+                        <field name="tipo_de_cambio" required="1"/>
+                        <field name="monto_en_efectivo" required="1"/>
+                        <field name="operacion" invisible="1"/>
+                        <field name="journal_ganancia_id" required="1"/>
+                    </group>
+                    <footer>
+                        <button string='Validar' states="borrador" name="validar_pago" type="object" class="btn-primary"/>
+                        <button string="Cancel" states="borrador" class="btn-default" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
+    <act_window
+    id="compraventa_pago_action"
+    name="Pago"
+    res_model="compraventa.divisas.pago"
+    src_model="compraventa.divisas"
+    view_mode="form"
+    multi="False"
+    target="new"
+    key2="client_action_multi"/>
+
+    <!-- Form compraventa_divisas  -->
+    <record id="compraventa_divisas_form" model="ir.ui.view">
+        <field name="name">compraventa.divisas.form</field>
+        <field name="model">compraventa.divisas</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Compra-Venta">
+                <header>
+                    <button name="confirmar" string="Confirmar" states="borrador" type="object" />
+                    <button name="asentar" string="Asentar" states="pagado" type="object" />
+                    <button type="action"
+                            id="compraventa_pago"
+                            string="Pagar/Cobrar"
+                            states="confirmado"
+                            name="%(compraventa_pago_action)d"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="id"/>
+                            <field name="fecha" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                            <field name="cuenta_entidad_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                            <field name="operacion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                            <field name="currency2_id" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                            <field name="journal_moneda_secundaria_id" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                            <field name="monto" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                        </group>
+                        <group>
+                            <field name="pago_id" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="compraventa_divisas_action" model="ir.actions.act_window">
+        <field name="name">Compra/Venta divisas</field>
+        <field name="res_model">compraventa.divisas</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="compraventa_divisas_tree"/>
+    </record>
+
+    <menuitem id="smenu_divisas" name="Compra/Venta Divisas" parent="menu_financiera" />
+    <menuitem id="smenu_divisas_action" name="Compra/Venta Divisas" parent="smenu_divisas" action="compraventa_divisas_action" sequence="1" />
+
+    <!-- compraventa stock  -->
+
+    <record id="compraventa_divisas_stock_tree" model="ir.ui.view">
+        <field name="name">compraventa.divisas.stock.tree</field>
+        <field name="model">compraventa.divisas.stock</field>
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Compra-Venta">
+                <field name="currency_id"/>
+                <field name="monto"/>
+                <field name="cotizacion"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="compraventa_divisas_stock_form" model="ir.ui.view">
+        <field name="name">compraventa.divisas.stock.form</field>
+        <field name="model">compraventa.divisas.stock</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Compra-Venta">
+                <header>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="currency_id"/>
+                            <field name="monto"/>
+                            <field name="cotizacion"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="compraventa_divisas_stock_action" model="ir.actions.act_window">
+        <field name="name">Stock Compra/Venta divisas</field>
+        <field name="res_model">compraventa.divisas.stock</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="compraventa_divisas_stock_tree"/>
+    </record>
+
+    <menuitem id="smenu_divisas_stock_action" name="Precio Stock Divisas" parent="smenu_divisas" action="compraventa_divisas_stock_action" sequence="1" />
+
+    </data>
+</openerp>

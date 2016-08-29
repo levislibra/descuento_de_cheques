@@ -6,3 +6,4 @@ import transferencia
 import cuenta_entidad
 import plazo_fijo
 import balance
+import compraventa_divisas

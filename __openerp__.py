@@ -27,6 +27,7 @@ Manejo de operatoria de descuento de cheques a clientes.
         'views/transferencia_view.xml',
         'views/plazo_fijo_view.xml',
         'views/balance_view.xml',
+        'views/compraventa_divisas_view.xml',
 
     ],
     'installable': True,
