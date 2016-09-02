@@ -67,7 +67,7 @@
             <form string="Compra-Venta">
                 <header>
                     <button name="confirmar" string="Confirmar" states="borrador" type="object" />
-                    <button name="asentar" string="Asentar" states="pagado" type="object" />
+                    <button name="asentar" string="Asentar" states="pagado,asentado" type="object" />
                     <button type="action"
                             id="compraventa_pago"
                             string="Pagar/Cobrar"
@@ -130,12 +130,21 @@
                 </header>
                 <sheet>
                     <group>
-                        <group>
-                            <field name="currency_id"/>
-                            <field name="monto"/>
-                            <field name="cotizacion"/>
-                        </group>
+                        <field name="currency_id"/>
+                        <field name="monto"/>
+                        <field name="cotizacion"/>
                     </group>
+                    <notebook>
+                        <page string="Historico">
+                            <field name="historico_ids" readonly="1">
+                                <tree delete="false">
+                                    <field name="fecha"/>
+                                    <field name="monto"/>
+                                    <field name="cotizacion"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

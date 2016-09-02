@@ -563,11 +563,12 @@ class descuento_pago(osv.Model):
 class form_rechazo_cheque(osv.Model):
     _name = 'form.rechazo.cheque'
     _description = 'Opciones con cheques'
-    _rec_name= "id"
+    _rec_name= "display_name"
     _order = "id desc"
     _columns = {
         'id': fields.integer("ID", readonly=True),
         'fecha': fields.date("Fecha", required=True),
+        'display_name': fields.char("Nombre", compute='_compute_display_name', readonly=True),
         'monto': fields.float("Monto", readonly=True),
         'detalle': fields.text("Detalle"),
         
@@ -589,6 +590,12 @@ class form_rechazo_cheque(osv.Model):
         'fecha': lambda *a: time.strftime('%Y-%m-%d'),
         'state': 'borrador',
     }
+
+    @api.one
+    @api.depends('fecha')
+    def _compute_display_name(self):
+        if self.fecha:
+            self.display_name = "RECHAZO/" + str(self.fecha) + "/" + str(self.id)
 
     @api.onchange('monto_gasto_pagar')
     def _compute_monto_gasto_cobrar(self):
@@ -615,8 +622,8 @@ class form_rechazo_cheque(osv.Model):
             raise UserError(_("Cuidado, solo puede cargar de a uno los cheques."))
 
         cheque = self.env[active_model].browse(active_id)[0]
-        #if cheque.state != 'depositado' and cheque.state != 'enpago':
-        #    raise UserError(_("No puedes procesar un rechazo si no fue 'Depositado' o dado 'En Pago' previamente."))
+        if cheque.state != 'depositado' and cheque.state != 'enpago':
+            raise UserError(_("No puedes procesar un rechazo si no fue 'Depositado' o dado 'En Pago' previamente."))
 
         name = 'Cheque rechazado / Banco ' + cheque.banco_id.name + ' / ' + cheque.name
         rec.update({

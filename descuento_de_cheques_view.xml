@@ -19,23 +19,61 @@
                 <field name="importe" sum="Total"/>
                 <field name="fecha_vencimiento"/>
                 <field name="state"/>
-                <field name="fecha_deposito"/>
-                <field name="account_destino_id"/>
-                <field name="boleta_deposito"/>
+                <!--<field name="fecha_deposito"/>
+                <field name="account_destino_id" width="50" maxlength="5"/>
+                <field name="boleta_deposito" width="20" maxlength="10"/>
                 <field name="fecha_acreditacion_contable"/>
                 <field name="cuenta_entidad_destino_id"/>
                 <field name="subcuenta_destino_id"/>
                 <field name="form_rechazo_cheque_id"/>
-                
+                -->
             </tree>
         </field>
     </record>
 
+    <record id="cheques_financiera_form" model="ir.ui.view">
+        <field name="name">cheques.financiera.form</field>
+        <field name="model">cheques.de.terceros</field>
+        <field name="arch" type="xml">
+            <form string="Cheques">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="entidad_id"/>
+                            <field name="subcuenta_id"/>
+                            <field name="liquidacion_id"/>
+                            <field name="firmante_id"/>
+                            <field name="banco_id"/>
+                            <field name="name"/>
+                            <field name="importe"/>
+                            <field name="fecha_vencimiento"/>
+                        </group>
+                        <group>
+                            <field name="fecha_deposito"/>
+                            <field name="account_destino_id"/>
+                            <field name="boleta_deposito"/>
+                            <field name="fecha_acreditacion_contable"/>
+                            <field name="cuenta_entidad_destino_id"/>
+                            <field name="subcuenta_destino_id"/>
+                            <field name="form_rechazo_cheque_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
     <record id="cheques_financiera_action" model="ir.actions.act_window">
         <field name="name">Cheques</field>
         <field name="res_model">cheques.de.terceros</field>
-        <field name="view_mode">tree</field>
-        <field name="view_id" ref="cheques_financiera_tree"/>
+        <field name="view_mode">tree,form</field>
+        <field name="view_ids"  eval="[(5, 0, 0),
+                (0, 0, {'view_mode': 'tree', 'view_id': ref('cheques_financiera_tree')}),
+                (0, 0, {'view_mode': 'form', 'view_id': ref('cheques_financiera_form')})]"/>
     </record>
 
     <act_window

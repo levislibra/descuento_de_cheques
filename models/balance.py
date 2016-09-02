@@ -41,8 +41,6 @@ class balance(osv.Model):
     #_name = 'balance'
     _description = 'balances y saldos de cuentas contables'
     _columns =  {
-        #faltan campos derivados
-        #saldo
         'saldo' : fields.float('Saldo', readonly=True),
         'move_line_ids': fields.one2many('account.move.line', 'account_id', 'Apuntes'),
     }
@@ -53,21 +51,42 @@ class balance(osv.Model):
 
     @api.multi
     def hola(self, cr):
-        _logger.error("HOLAAAAAAAAAA!!! : %r", self)
         apunte_previo = None
         apuntes_ids = self.move_line_ids
         count = len(apuntes_ids)
+        company_currency_id = self.env['res.users'].browse(self.env.uid).currency_id.id
+        currency_default = self.currency_id.id == False or self.currency_id.id == company_currency_id
         self.saldo = 0
-        i = 1
+        i = 1   
         while i <= count:
             apunte = apuntes_ids[count-i]
-            self.saldo += apunte.debit - apunte.credit
-            if apunte_previo != None:
-                apunte.sub_saldo = apunte.debit - apunte.credit + apunte_previo.sub_saldo
-
-                apunte.saldo = apunte.debit - apunte.credit + apunte_previo.saldo
+            if currency_default:
+                self.saldo += apunte.debit - apunte.credit
             else:
-                apunte.sub_saldo = apunte.debit - apunte.credit
-                apunte.saldo = apunte.debit - apunte.credit
+                self.saldo += apunte.amount_currency
+            if apunte_previo != None:
+                if currency_default:
+                    apunte.sub_saldo = apunte.debit - apunte.credit + apunte_previo.sub_saldo
+                    apunte.saldo = apunte.debit - apunte.credit + apunte_previo.saldo
+                else:
+                    apunte.sub_saldo = apunte.amount_currency + apunte_previo.sub_saldo
+                    apunte.saldo = apunte.amount_currency + apunte_previo.saldo
+            else:
+                if currency_default:
+                    apunte.sub_saldo = apunte.debit - apunte.credit
+                    apunte.saldo = apunte.debit - apunte.credit
+                else:
+                    apunte.sub_saldo = apunte.amount_currency
+                    apunte.saldo = apunte.amount_currency
             apunte_previo = apunte
             i = i + 1
+    
+
+    def actualizar_cuentas(self,cr,uid,ids,context={}):
+        _logger.error("ACTUALIZAR TODAS LAS CUENTAS!")
+        cuentas_obj = self.pool.get('account.account')
+        cuentas_obj_ids = cuentas_obj.search(cr, uid, [])
+        for cuenta_id in cuentas_obj_ids:
+            cuenta = cuentas_obj.browse(cr, uid, cuenta_id, context=None)
+            cuenta.hola(cr)
+        return True
