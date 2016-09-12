@@ -50,7 +50,7 @@ class balance(osv.Model):
     }
 
     @api.multi
-    def hola(self, cr):
+    def actsaldo(self, cr):
         apunte_previo = None
         apuntes_ids = self.move_line_ids
         count = len(apuntes_ids)
@@ -81,12 +81,24 @@ class balance(osv.Model):
             apunte_previo = apunte
             i = i + 1
     
+class balance_view(osv.Model):
+    _name = 'balance.view'
+    _description = 'balances y saldos de cuentas contables'
 
     def actualizar_cuentas(self,cr,uid,ids,context={}):
-        _logger.error("ACTUALIZAR TODAS LAS CUENTAS!")
         cuentas_obj = self.pool.get('account.account')
         cuentas_obj_ids = cuentas_obj.search(cr, uid, [])
+        dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'descuento_de_cheques', 'balance_tree')
         for cuenta_id in cuentas_obj_ids:
             cuenta = cuentas_obj.browse(cr, uid, cuenta_id, context=None)
-            cuenta.hola(cr)
-        return True
+            cuenta.actsaldo(cr)
+        return {
+                'name': ('Cuentas'),
+                'view_type': 'form',
+                'view_mode': 'tree',
+                'res_model': 'account.account',
+                'view_id': view_id,
+                'tag': 'reload',
+                'type': 'ir.actions.act_window',
+                'context': context,
+                }

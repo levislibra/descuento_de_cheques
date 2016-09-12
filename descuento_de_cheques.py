@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+    # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 #from openerp.osv import osv, orm
@@ -72,13 +72,11 @@ class cheques_de_terceros(osv.Model):
     @api.one
     @api.depends('importe', 'tasa_fija_descuento')
     def _calcular_descuento_fijo(self):
-        _logger.error("_calcular_descuento_fijo")
     	self.monto_fijo_descuento = self.importe * (self.tasa_fija_descuento / 100)
 
     @api.one
     @api.depends('importe', 'tasa_mensual_descuento', 'dias_descuento')
     def _calcular_descuento_mensual(self):
-        _logger.error("_calcular_descuento_mensual")
     	self.monto_mensual_descuento = self.dias_descuento * ((self.tasa_mensual_descuento / 30) / 100) * self.importe
 
 
@@ -87,14 +85,10 @@ class cheques_de_terceros(osv.Model):
     def _calcular_descuento_dias(self):
         fecha_inicial_str = False
         fecha_final_str = False
-        _logger.error("_calcular_descuento_dias")
-        _logger.error("Fecha_inicial antes: %r",fecha_inicial_str)
         if self.liquidacion_id.fecha_liquidacion != False:
     	   fecha_inicial_str = str(self.liquidacion_id.fecha_liquidacion)
         if self.fecha_acreditacion_descuento != False:
     	   fecha_final_str = str(self.fecha_acreditacion_descuento)
-        _logger.error("fecha_inicial: %r",fecha_inicial_str)
-        _logger.error("fecha_final: %r",fecha_final_str)
 
     	if fecha_inicial_str != False and fecha_final_str != False:
             formato_fecha = "%Y-%m-%d"
@@ -111,21 +105,18 @@ class cheques_de_terceros(osv.Model):
     #Ojo -- actualizar bien esta funcion.
     @api.onchange('name')
     def _calcular_descuento_tasas(self):
-        _logger.error("_calcular_descuento_tasas")
         if self.liquidacion_id is not None and self.liquidacion_id.subcuenta_id is not None:
             self.tasa_fija_descuento = self.liquidacion_id.subcuenta_id.tasa_fija_descuento
             self.tasa_mensual_descuento = self.liquidacion_id.subcuenta_id.tasa_mensual_descuento
 
     @api.onchange('fecha_vencimiento')
     def _calcular_fecha_acreditacion(self):
-        _logger.error("_calcular_descuento_fecha_acreditacion")
         self.fecha_acreditacion_descuento = self.fecha_vencimiento
 
 
     @api.one
     @api.depends('monto_fijo_descuento', 'monto_mensual_descuento')
     def _calcular_descuento_neto(self):
-        _logger.error("_calcular_descuento_neto")
     	self.monto_neto_descuento = self.importe - self.monto_fijo_descuento - self.monto_mensual_descuento
 
 
@@ -138,13 +129,14 @@ class descuento_de_cheques(osv.Model):
         'id': fields.integer('Nro liquidacion'),
         'fecha_liquidacion': fields.date('Fecha', required=True),
         'active': fields.boolean('Activa'),
-        'cuenta_entidad_id': fields.many2one('cuenta.entidad', 'Cuenta', required=True),
+        'cuenta_entidad_id': fields.many2one('cuenta.entidad', 'Cuenta', domain="[('currency_id.id', '=', 20), ('state', '=', 'confirmada')]", required=True),
         'subcuenta_id': fields.many2one('subcuenta', 'Subcuenta', domain="[('cuenta_entidad_id.id', '=', cuenta_entidad_id), ('descuento_de_cheques','=', True)]", required=True),
 
         'journal_id': fields.many2one('account.journal', 'Diario', required=True),
         'move_confirmacion_id':fields.many2one('account.move', 'Asiento confirmacion', readonly=True),
         'move_pago_id':fields.many2one('account.move', 'Asiento pago', readonly=True),
         'invoice':fields.boolean('Emitir factura'),
+        'iva_id': fields.many2one("account.tax", "Impuesto", domain="[('active', '=', True), ('type_tax_use', '=', 'sale')]"),
         'invoice_id':fields.many2one('account.invoice', 'Factura', readonly=True),
         'form_confirmar_descuento_id': fields.many2one("form.confirmar.descuento", "Registro de confirmacion", readonly=True),
         'descuento_pago_id': fields.many2one("descuento.pago", "Comprobante de pago", readonly=True),
@@ -165,25 +157,9 @@ class descuento_de_cheques(osv.Model):
         if self.subcuenta_id.cuenta_entidad_id.id != self.cuenta_entidad_id.entidad_id.id:
             raise ValidationError("La subcuenta no pertenece al cliente")
 
-        #if self.subcuenta_id.state != 'activa':
-            #raise ValidationError("La subcuenta no esta Activa")
-
-#    @api.one
-#    @api.constrains('fecha_liquidacion', 'subcuenta_id')
-#    def _check_fecha_liquidacion_subcuenta(self):
-#        if self.subcuenta_id.apuntes_ids:
-#            last_date_move_line = self.subcuenta_id.apuntes_ids[0].date
-#            _logger.error("apuntes fecha last: %r", last_date_move_line)
-#            if self.fecha_liquidacion < last_date_move_line:
-#                text_error = "La fecha de la liquidacion (" + str(self.fecha_liquidacion) + ") no puede ser menos a la ultima fecha de la subcuenta (" + str(last_date_move_line) +")"
-#                raise ValidationError(text_error)
-
-
-
     @api.one
     @api.constrains('journal_id')
     def _check_description(self):
-        _logger.error("JOURNAL ID: ")
         if self.journal_id.default_debit_account_id == False:
             raise ValidationError("En el Diario, la cuenta no esta definida.")
 
@@ -193,7 +169,7 @@ class descuento_de_cheques(osv.Model):
             self.subcuenta_id = False
 
     @api.one
-    @api.depends('cheques_ids')
+    @api.depends('cheques_ids', 'iva_id')
     def _calcular_montos_liquidacion(self):
         self.bruto_liquidacion = 0
         self.gasto_liquidacion = 0
@@ -206,6 +182,9 @@ class descuento_de_cheques(osv.Model):
             self.interes_liquidacion += cheque.monto_mensual_descuento
             self.gasto_interes_liquidacion += cheque.monto_fijo_descuento + cheque.monto_mensual_descuento
             self.neto_liquidacion += cheque.monto_neto_descuento
+        if self.invoice:
+            iva_monto = self.interes_liquidacion * (self.iva_id.amount / 100)
+            self.neto_liquidacion -= iva_monto
 
 
     @api.multi
@@ -247,7 +226,7 @@ class descuento_de_cheques(osv.Model):
             # Acredito el neto al cliente
             aml2 = {
                 'date': self.fecha_liquidacion,
-                'account_id': self.cuenta_entidad_id.entidad_id.property_account_receivable_id.id,
+                'account_id': self.cuenta_entidad_id.account_cobrar_id.id,
                 'name': descuento_name + ' - Acredito neto del descuento',
                 'partner_id': self.cuenta_entidad_id.entidad_id.id,
                 'credit': self.neto_liquidacion,
@@ -267,17 +246,16 @@ class descuento_de_cheques(osv.Model):
                 }
                 line_ids.append((0,0,aml3))
 
-            if self.invoice and False:
+            if self.invoice:
                 # create move line
-                # Acredito el monto de IVA a la cuenta respectiva (GASTOS)
-                monto_iva = self.interes_liquidacion * 0.21
+                # Acredito el monto de IVA a la cuenta respectiva
+                monto_iva = self.interes_liquidacion * (self.iva_id.amount / 100)
                 aml4 = {
                     'date': self.fecha_liquidacion,
-                    'account_id': self.subcuenta_id.account_id.id,
+                    'account_id': self.iva_id.account_id.id,
                     'name': descuento_name + ' - IVA',
                     'partner_id': self.cuenta_entidad_id.entidad_id.id,
                     'credit': monto_iva,
-                    'subcuenta_id': self.subcuenta_id.id,
                 }
                 line_ids.append((0,0,aml4))
 
@@ -308,6 +286,7 @@ class descuento_de_cheques(osv.Model):
                 'quantity':1,
                 'price_unit': self.interes_liquidacion,
                 'account_id': self.journal_id.default_debit_account_id.id,
+                'invoice_line_tax_ids':[(6,0,[self.iva_id.id])],
             }
 
             # Create invoice line
@@ -333,7 +312,7 @@ class descuento_de_cheques(osv.Model):
                     #residual=self.gasto_interes_liquidacion,
                     #residual_company_signed=self.gasto_interes_liquidacion,
                     #residual_signed=self.gasto_interes_liquidacion,
-                    account_id=self.subcuenta_id.account_id.id,
+                    account_id=self.subcuenta_id.cuenta_entidad_id.account_cobrar_id.id,
                     invoice_line_ids=[(0, 0, ail), (0, 0, ail2)]
                 ))
                 account_invoice_customer0.signal_workflow('invoice_open')

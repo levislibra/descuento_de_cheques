@@ -85,7 +85,6 @@ class subcuenta(osv.Model):
 
     @api.one
     def activar(self, cr):
-        _logger.error("Activar cuenta")
         self.state = 'activa'
 
     def _cantidad_de_dias(self, fecha_inicial, fecha_final):
@@ -98,6 +97,9 @@ class subcuenta(osv.Model):
     @api.multi
     def button_actualizar_saldo_acumulado(self, cr):
         apunte_previo = None
+        flag_divisa = False
+        if self.cuenta_entidad_id.currency_id != False and self.cuenta_entidad_id.currency_id.id != 20:
+            flag_divisa = True
         apuntes_ids = self.apuntes_ids
         count = len(apuntes_ids)
         i = 1
@@ -109,30 +111,41 @@ class subcuenta(osv.Model):
                 elif self.tipo == 'pasivo':
                     apunte.tasa_descubierto = self.tasa_mensual_pagada
             if apunte_previo != None:
-                apunte.sub_saldo = apunte.debit - apunte.credit + apunte_previo.sub_saldo
+                if flag_divisa:
+                    apunte.sub_saldo = apunte.amount_currency + apunte_previo.sub_saldo
+                else:
+                    apunte.sub_saldo = apunte.debit - apunte.credit + apunte_previo.sub_saldo
                 apunte.dias = self._cantidad_de_dias(apunte_previo.date, apunte.date)
                 
                 if not apunte.interes_generado and self.tipo == 'activo' and apunte_previo.saldo > 0 and not apunte.interes_fijo:
                     #if apunte.tasa_descubierto == -1:
                     #    apunte.tasa_descubierto = self.tasa_descubierto
                     apunte.monto_interes = apunte_previo.saldo * apunte.dias * (apunte.tasa_descubierto / 30 / 100)
-                    _logger.error("Calculo interes Activo")
                 elif not apunte.interes_generado and self.tipo == 'pasivo' and apunte_previo.saldo < 0 and not apunte.interes_fijo:
                     #if apunte.tasa_descubierto == -1:
                     #    apunte.tasa_descubierto = self.tasa_mensual_pagada
                     apunte.monto_interes = apunte_previo.saldo * apunte.dias * (apunte.tasa_descubierto / 30 / 100)
-                    _logger.error("Calculo interes Pasivo")
 
-                apunte.saldo = apunte.debit - apunte.credit + apunte.monto_interes + apunte_previo.saldo
+                if flag_divisa:
+                    apunte.saldo = apunte.amount_currency + apunte.monto_interes + apunte_previo.saldo
+                else:
+                    apunte.saldo = apunte.debit - apunte.credit + apunte.monto_interes + apunte_previo.saldo
             else:
-                apunte.sub_saldo = apunte.debit - apunte.credit
-                apunte.saldo = apunte.debit - apunte.credit
+                if flag_divisa:
+                    apunte.sub_saldo = apunte.amount_currency
+                    apunte.saldo = apunte.amount_currency
+                else:
+                    apunte.sub_saldo = apunte.debit - apunte.credit
+                    apunte.saldo = apunte.debit - apunte.credit
             apunte_previo = apunte
             i = i + 1
 
     @api.model
     def _actualizar_saldo_acumulado(self):
         apunte_previo = None
+        flag_divisa = False
+        if self.cuenta_entidad_id.currency_id.id != 20:
+            flag_divisa = True
         apuntes_ids = self.apuntes_ids
         count = len(apuntes_ids)
         i = 1
@@ -144,34 +157,47 @@ class subcuenta(osv.Model):
                 elif self.tipo == 'pasivo':
                     apunte.tasa_descubierto = self.tasa_mensual_pagada
             if apunte_previo != None:
-                apunte.sub_saldo = apunte.debit - apunte.credit + apunte_previo.sub_saldo
+                if flag_divisa:
+                    apunte.sub_saldo = apunte.amount_currency + apunte_previo.sub_saldo
+                else:
+                    apunte.sub_saldo = apunte.debit - apunte.credit + apunte_previo.sub_saldo
                 apunte.dias = self._cantidad_de_dias(apunte_previo.date, apunte.date)
-
-                if  not apunte.interes_generado and self.tipo == 'activo' and apunte_previo.saldo > 0 and not apunte.interes_fijo:
+                
+                if not apunte.interes_generado and self.tipo == 'activo' and apunte_previo.saldo > 0 and not apunte.interes_fijo:
                     #if apunte.tasa_descubierto == -1:
                     #    apunte.tasa_descubierto = self.tasa_descubierto
                     apunte.monto_interes = apunte_previo.saldo * apunte.dias * (apunte.tasa_descubierto / 30 / 100)
-                    _logger.error("Calculo interes Activo")
                 elif not apunte.interes_generado and self.tipo == 'pasivo' and apunte_previo.saldo < 0 and not apunte.interes_fijo:
                     #if apunte.tasa_descubierto == -1:
                     #    apunte.tasa_descubierto = self.tasa_mensual_pagada
                     apunte.monto_interes = apunte_previo.saldo * apunte.dias * (apunte.tasa_descubierto / 30 / 100)
-                    _logger.error("Calculo interes Pasivo")
 
-                apunte.saldo = apunte.debit - apunte.credit + apunte.monto_interes + apunte_previo.saldo
+                if flag_divisa:
+                    apunte.saldo = apunte.amount_currency + apunte.monto_interes + apunte_previo.saldo
+                else:
+                    apunte.saldo = apunte.debit - apunte.credit + apunte.monto_interes + apunte_previo.saldo
             else:
-                apunte.sub_saldo = apunte.debit - apunte.credit
-                apunte.saldo = apunte.debit - apunte.credit
+                if flag_divisa:
+                    apunte.sub_saldo = apunte.amount_currency
+                    apunte.saldo = apunte.amount_currency
+                else:
+                    apunte.sub_saldo = apunte.debit - apunte.credit
+                    apunte.saldo = apunte.debit - apunte.credit
             apunte_previo = apunte
             i = i + 1
-
 
     @api.one
     @api.depends('apuntes_ids')
     def _calcular_saldo(self):
-		self.saldo = 0
-		for apunte in self.apuntes_ids:
-			self.saldo += apunte.debit - apunte.credit + apunte.monto_interes
+        self.saldo = 0
+        flag_divisa = False
+        if self.cuenta_entidad_id.currency_id.id != 20:
+            flag_divisa = True
+        for apunte in self.apuntes_ids:
+            if flag_divisa:
+                self.saldo += apunte.amount_currency + apunte.monto_interes
+            else:
+                self.saldo += apunte.debit - apunte.credit + apunte.monto_interes
 
 
     def ver_subcuentas(self, cr, uid, ids, context=None):
@@ -350,28 +376,54 @@ class form_opciones_subcuenta_move_line(osv.Model):
                 movimientos[0].subcuenta_id._actualizar_saldo_acumulado()
 
         if self.asentar_interes == True:
+            flag_divisa = False
+            if self.cuenta_entidad_id.currency_id.id != 20:
+                flag_divisa = True
             for m in movimientos:
 
                 if not m.interes_generado and m.subcuenta_id.tipo == 'activo' and m.monto_interes > 0:
                     account_id = m.subcuenta_id.cuenta_entidad_id.account_cobrar_id.id
 
-                    # create move line
-                    # Creo asiento con los intereses generados en dicha fecha.
-                    aml = {
-                        'date': m.date,
-                        'account_id': account_id,
-                        'name': 'Interes generado',
-                        'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
-                        'debit': m.monto_interes,
-                    }
+                    if flag_divisa:
+                        # create move line
+                        # Creo asiento con los intereses generados en dicha fecha.
+                        aml = {
+                            'date': m.date,
+                            'account_id': account_id,
+                            'name': 'Interes generado',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'currency_id': self.cuenta_entidad_id.currency_id.id,
+                            'amount_currency': m.monto_interes,
+                            'debit': m.monto_interes * self.cuenta_entidad_id.currency_id.rate,
+                        }
 
-                    aml2 = {
-                        'date': m.date,
-                        'account_id': self.journal_intereses_id.id,
-                        'name': m.subcuenta_id.cuenta_entidad_id.entidad_id.name + ' - Interes generado',
-                        'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
-                        'credit': m.monto_interes,
-                    }
+                        aml2 = {
+                            'date': m.date,
+                            'account_id': self.journal_intereses_id.default_debit_account_id.id,
+                            'name': m.subcuenta_id.cuenta_entidad_id.entidad_id.name + ' - Interes generado',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'currency_id': self.cuenta_entidad_id.currency_id.id,
+                            'amount_currency': -m.monto_interes,
+                            'credit': m.monto_interes * self.cuenta_entidad_id.currency_id.rate,
+                        }
+                    else:
+                        # create move line
+                        # Creo asiento con los intereses generados en dicha fecha.
+                        aml = {
+                            'date': m.date,
+                            'account_id': account_id,
+                            'name': 'Interes generado',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'debit': m.monto_interes,
+                        }
+
+                        aml2 = {
+                            'date': m.date,
+                            'account_id': self.journal_intereses_id.default_debit_account_id.id,
+                            'name': m.subcuenta_id.cuenta_entidad_id.entidad_id.name + ' - Interes generado',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'credit': m.monto_interes,
+                        }
 
                     # create move
                     company_id = self.env['res.users'].browse(self.env.uid).company_id.id
@@ -380,7 +432,7 @@ class form_opciones_subcuenta_move_line(osv.Model):
                     move = self.env['account.move'].create({
                         'name': move_name,
                         'date': m.date,
-                        'journal_id': m.journal_id.id,
+                        'journal_id': self.journal_intereses_id.id,
                         'state':'draft',
                         'company_id': company_id,
                         'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
@@ -393,23 +445,46 @@ class form_opciones_subcuenta_move_line(osv.Model):
                 elif not m.interes_generado and m.subcuenta_id.tipo == 'pasivo' and m.monto_interes < 0:
                     account_id = m.subcuenta_id.cuenta_entidad_id.account_pagar_id.id
 
-                    # create move line
-                    # Creo asiento con los intereses generados en dicha fecha.
-                    aml = {
-                        'date': m.date,
-                        'account_id': account_id,
-                        'name': 'Interes generado a pagar',
-                        'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
-                        'credit': abs(m.monto_interes),
-                    }
+                    if flag_divisa:
+                        # create move line
+                        # Creo asiento con los intereses generados en dicha fecha.
+                        aml = {
+                            'date': m.date,
+                            'account_id': account_id,
+                            'name': 'Interes generado a pagar',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'currency_id': self.cuenta_entidad_id.currency_id.id,
+                            'amount_currency': -abs(m.monto_interes),
+                            'credit': abs(m.monto_interes) * self.cuenta_entidad_id.currency_id.rate,
+                        }
 
-                    aml2 = {
-                        'date': m.date,
-                        'account_id': self.journal_intereses_id.id,
-                        'name': m.subcuenta_id.cuenta_entidad_id.entidad_id.name + ' - Interes generado a pagar',
-                        'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
-                        'debit': abs(m.monto_interes),
-                    }
+                        aml2 = {
+                            'date': m.date,
+                            'account_id': self.journal_intereses_id.default_credit_account_id.id,
+                            'name': m.subcuenta_id.cuenta_entidad_id.entidad_id.name + ' - Interes generado a pagar',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'currency_id': self.cuenta_entidad_id.currency_id.id,
+                            'amount_currency': abs(m.monto_interes),
+                            'debit': abs(m.monto_interes) * self.cuenta_entidad_id.currency_id.rate,
+                        }
+                    else:
+                        # create move line
+                        # Creo asiento con los intereses generados en dicha fecha.
+                        aml = {
+                            'date': m.date,
+                            'account_id': account_id,
+                            'name': 'Interes generado a pagar',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'credit': abs(m.monto_interes),
+                        }
+
+                        aml2 = {
+                            'date': m.date,
+                            'account_id': self.journal_intereses_id.default_credit_account_id.id,
+                            'name': m.subcuenta_id.cuenta_entidad_id.entidad_id.name + ' - Interes generado a pagar',
+                            'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,
+                            'debit': abs(m.monto_interes),
+                        }
 
                     # create move
                     company_id = self.env['res.users'].browse(self.env.uid).company_id.id
@@ -418,7 +493,7 @@ class form_opciones_subcuenta_move_line(osv.Model):
                     move = self.env['account.move'].create({
                         'name': move_name,
                         'date': m.date,
-                        'journal_id': m.journal_id.id,
+                        'journal_id': self.journal_intereses_id.id,
                         'state':'draft',
                         'company_id': company_id,
                         'partner_id': m.subcuenta_id.cuenta_entidad_id.entidad_id.id,

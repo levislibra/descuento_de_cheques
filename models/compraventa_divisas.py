@@ -63,7 +63,6 @@ class compraventa_divisas(osv.Model):
         return True
 
     def _crear_asiento(self, ganancia):
-        _logger.error("CREAR ASIENTO")
         fecha = self.fecha
         partner_id = self.cuenta_entidad_id.entidad_id.id
         operacion = self.operacion
@@ -77,7 +76,6 @@ class compraventa_divisas(osv.Model):
         line_ids = []
         debit = 0
         if ganancia > 0:
-            _logger.error("GANANCIA > 0")
             gan = {
                 'date': fecha,
                 'account_id': diario_ganancia_id.default_credit_account_id.id,
@@ -87,7 +85,6 @@ class compraventa_divisas(osv.Model):
             }
             line_ids.append((0,0,gan))
             if operacion == 'compra':
-                _logger.error("COMPRA")
                 #COMPRA CON GANANCIA
                 debit = monto_en_efectivo + ganancia
                 # create move line
@@ -114,7 +111,6 @@ class compraventa_divisas(osv.Model):
                 }
                 line_ids.append((0,0,aml2))
             else:
-                _logger.error("VENTA")
                 credit = monto_en_efectivo - ganancia
                 #VENTA CON GANANCIA
                 # create move line
@@ -141,7 +137,6 @@ class compraventa_divisas(osv.Model):
                 }
                 line_ids.append((0,0,aml2))
         else:
-            _logger.error("GANANCIA < 0")
             gan = {
                 'date': fecha,
                 'account_id': diario_ganancia_id.default_debit_account_id.id,
@@ -151,7 +146,6 @@ class compraventa_divisas(osv.Model):
             }
             line_ids.append((0,0,gan))
             if operacion == 'compra':
-                _logger.error("COMPRA")
                 #COMPRA CON PERDIDA
                 debit = monto_en_efectivo - abs(ganancia)
                 # create move line
@@ -178,14 +172,7 @@ class compraventa_divisas(osv.Model):
                     'amount_currency': 0,
                 }
                 line_ids.append((0,0,aml2))
-                _logger.error("ganancia debit: %r", ganancia)
-                _logger.error("debit: %r", debit)
-                _logger.error("credit: %r", monto_en_efectivo)
-                _logger.error("currency_id: %r", divisa_id)
-                _logger.error("amount_currency: %r", monto_en_divisas)
-
             else:
-                _logger.error("VENTA")
                 credit = monto_en_efectivo + abs(ganancia)
                 #VENTA CON PERDIDA
                 # create move line
@@ -271,7 +258,6 @@ class compraventa_divisas(osv.Model):
                     ganancia = monto_stock * (cotizacion_stock - cotizacion_actual)
                     self.currency2_id.cotizacion = cotizacion_actual
             if cotizacion_stock != self.currency2_id.cotizacion:
-                _logger.error("Nueva cotizacion")
                 historico_ids = []
                 val = {
                         'monto': monto_stock,
@@ -282,7 +268,6 @@ class compraventa_divisas(osv.Model):
                 historico_n = self.env['compraventa.divisas.stock.historico'].create(val)
                 for h in self.currency2_id.historico_ids:
                     historico_ids.append(h.id)
-                    _logger.error("historicos: %r", h.cotizacion)
                 historico_ids.append(historico_n.id)
                 self.currency2_id.historico_ids = historico_ids
 
@@ -345,7 +330,6 @@ class compraventa_divisas_pago(osv.Model):
             compraventa_id.state = 'pagado'
             compraventa_id.pago_id = self.id
             #ganancia = compraventa_id._actualizar_stock()
-            #_logger.error("ganancia: %r", ganancia)
         return {'type': 'ir.actions.act_window_close'}
 
 class compraventa_divisas_stock(osv.Model):

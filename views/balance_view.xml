@@ -2,6 +2,25 @@
 <openerp>
     <data>
 
+    <!-- account.move.line -->
+    <record id="movimientos_tree" model="ir.ui.view">
+        <field name="name">movimientos.tree</field>
+        <field name="model">account.move.line</field>
+        <field name="type">tree</field>
+        <field name="arch" type="xml">
+            <tree string="Movimientos">
+                <field name="date"/>
+                <field name="subcuenta_id"/>
+                <field name="name"/>
+                <field name="debit" sum="Total Debito"/>
+                <field name="credit" sum="Total Credito"/>
+                <field name="currency_id"/>
+                <field name="amount_currency" sum="Total"/>
+                <field name="saldo"/>
+            </tree>
+        </field>
+    </record>
+
     <act_window name="Movimientos"
     res_model="account.move.line"
     src_model="account.account"
@@ -11,7 +30,6 @@
     id="movimientos_action"
     domain="[('account_id', '=', active_id)]"/>
 
-    <!-- Tree balance  -->
     <record id="balance_tree" model="ir.ui.view">
         <field name="name">balance.inherits.tree</field>
         <field name="model">account.account</field>
@@ -28,7 +46,7 @@
                 />
                 <button type="object"
                     id="button_actualizar_saldo_action"
-                    name="hola"
+                    name="actsaldo"
                     string="Actualizar"
                 />
                 <field name="name"/>
@@ -67,40 +85,32 @@
         <field name="view_id" ref="balance_tree"/>
     </record>
 
-    <!-- account.move.line -->
-    <record id="movimientos_tree" model="ir.ui.view">
-        <field name="name">movimientos.tree</field>
-        <field name="model">account.move.line</field>
-        <field name="type">tree</field>
+    <!-- Menu Actualizar cuentas -->
+    <record id="balance_actualizar_cuentas_form" model="ir.ui.view">
+        <field name="name">balance.view.form</field>
+        <field name="model">balance.view</field>
+        <field name="type">form</field>
         <field name="arch" type="xml">
-            <tree string="Movimientos">
-                <field name="date"/>
-                <field name="subcuenta_id"/>
-                <field name="name"/>
-                <field name="debit" sum="Total Debito"/>
-                <field name="credit" sum="Total Credito"/>
-                <field name="currency_id"/>
-                <field name="amount_currency" sum="Total"/>
-                <field name="saldo"/>
-            </tree>
+            <form string="Balances">
+                <footer>
+                    <button string='Actualizar cuentas' name="actualizar_cuentas" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-default" special="cancel"/>
+                </footer>
+            </form>
         </field>
+    </record>
+
+    <record id="balance_actualizar_action" model="ir.actions.act_window">
+        <field name="name">Actualizar balances y saldos?</field>
+        <field name="res_model">balance.view</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="balance_actualizar_cuentas_form"/>
     </record>
 
     <menuitem id="smenu_balance" name="Balances" parent="menu_financiera" />
     <menuitem id="smenu_balance_action" name="Balances" parent="smenu_balance" action="balance_action" sequence="1" />
-
-    <!-- Actualizar cuenta -->
-    <record id="actualizar_cuentas_action" model="ir.actions.server">
-        <field name="name">Actualizar</field>
-        <field name="condition">True</field>
-        <field name="type">ir.actions.server</field>
-        <field name="model_id" ref="model_account_account" />
-        <field name="state">code</field>
-        <field name="code">self.actualizar_cuentas(cr, uid, context.get('active_ids', []), context=context)</field>
-    </record>
-
-    <menuitem id='smenu_actualizar' name='Actualizar Cuentas' sequence="2" parent="smenu_balance" action="actualizar_cuentas_action"/>
-
+    <menuitem id="smenu_balance_actualizar_action" name="Actualizar" parent="smenu_balance" action="balance_actualizar_action" sequence="2" />
 
     </data>
 </openerp>

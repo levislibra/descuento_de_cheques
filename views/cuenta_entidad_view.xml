@@ -58,6 +58,7 @@
                             <field name="entidad_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                         </group>
                         <group string="Contabilidad">
+                            <field name="currency_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                             <field name="account_cobrar_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                             <field name="account_pagar_id" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                         </group>
@@ -83,10 +84,10 @@
                                 </form>
                             </field>
                         </page>
-                        <page name="liquidaciones" string="Liquidaciones">
+                        <page name="liquidaciones" string="Liquidaciones" attrs="{'invisible': [('currency_id', '!=', 20)]}">
                             <field name="descuento_de_cheques_ids"/>
                         </page>
-                        <page name="plazo_fijo" string="Plazos Fijos">
+                        <page name="plazo_fijo" string="Plazos Fijos" attrs="{'invisible': [('currency_id', '!=', 20)]}">
                             <field name="plazos_fijos_ids"/>
                         </page>
                     </notebook>

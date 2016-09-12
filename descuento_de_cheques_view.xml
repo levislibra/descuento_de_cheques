@@ -153,6 +153,7 @@
                         <field name="subcuenta_id" widget='selection' attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
                         <field name="journal_id" attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
                         <field name="invoice"  attrs="{'readonly': [('state', '!=', 'cotizacion')]}"/>
+                        <field name="iva_id"  attrs="{'readonly': [('state', '!=', 'cotizacion')], 'invisible': [('invoice', '=', False)] , 'required': [('invoice', '=', True)]}"/>
                     </group>
                     <notebook>
                         <page string="Cheques">
@@ -360,8 +361,6 @@
     <!-- SubMenu 1 - Liquidaciones -->
     <menuitem id="smenu_liquidaciones" name="Liquidaciones" parent="menu_financiera"  sequence="1" />
     <menuitem id="smenu_liquidaciones_action" name="Liquidaciones" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="0" />
-
-    <menuitem id="smenu_liquidaciones_configuracion_action" name="Configuracion" parent="smenu_liquidaciones" action="liquidaciones_action"  sequence="1" />
 
     <!-- SubMenu 2 - Transferencias -->
     <menuitem id="smenu_generales" name="Generales" parent="menu_financiera"  sequence="2" />

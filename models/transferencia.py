@@ -70,7 +70,7 @@ class transferencia(osv.Model):
     _columns = {
         'fecha': fields.date('Fecha', required=True),
         'state': fields.selection([('borrador', 'Borrador'), ('confirmada', 'Confirmada'), ('registrada', 'Registrada'), ('cancelada', 'Cancelada')], string='Estado', readonly=True),
-        'tipo_de_pago': fields.selection([('enviarDinero', 'Pago/Enviar dinero/Deposito bancario'), ('recibirDinero', 'Cobro/Recibir dinero'), ('transferenciaEntidad', 'Transferencia entre subcuentas'), ('transferenciaContable', 'Transferencia contable')], string='Tipo de pago', required=True),
+        'tipo_de_pago': fields.selection([('enviarDinero', 'Enviar dinero'), ('recibirDinero', 'Recibir dinero'), ('transferenciaEntidad', 'Transferencia entre subcuentas'), ('transferenciaContable', 'Transferencia contable')], string='Tipo de pago', required=True),
         'move_id': fields.many2one('account.move', 'Asiento', readonly=True),
         'state_move_id': fields.char('Estado', readonly=True),
         'move_line_ids': fields.one2many('account.move.line', 'transferencia_id', related='move_id.line_ids', readonly=True, store=False),
@@ -84,6 +84,7 @@ class transferencia(osv.Model):
         'cuenta2_id': fields.many2one('account.account', 'Cuenta  Receptora', help="Cuenta Receptora de la transferencia"),
 
         'journal_id': fields.many2one('account.journal', 'Metodo de pago/cobro'),
+        'journal_transferencia_id': fields.many2one('account.journal', 'Diario de la transferencia'),
         'efectivo': fields.boolean('Efectivo'),
         'monto_efectivo': fields.float('Monto efectivo'),
         'monto': fields.float('Monto'),
@@ -108,9 +109,46 @@ class transferencia(osv.Model):
         'deposito_bancario': False,
     }
 
+    @api.constrains('cuenta_entidad_id', 'cuenta_entidad2_id', 'cuenta_id', 'cuenta2_id', 'journal_id', 'journal_recibir_cheques_id', 'cheques', 'efectivo')
+    def _controlar_moneda(self):
+        company_currency_id = self.env['res.users'].browse(self.env.uid).currency_id.id
+        if self.tipo_de_pago == 'enviarDinero' or self.tipo_de_pago == 'recibirDinero':
+            if self.cuenta_entidad_id.currency_id.id == company_currency_id:
+                if self.efectivo:
+                    flag_error = not (self.journal_id.default_debit_account_id.currency_id.id == False or self.journal_id.default_debit_account_id.currency_id.id == self.cuenta_entidad_id.currency_id.id)
+                    flag_error = flag_error and not (self.journal_id.default_credit_account_id.currency_id.id == False or self.journal_id.default_credit_account_id.currency_id.id == self.cuenta_entidad_id.currency_id.id)
+                    if flag_error:
+                        raise UserError(_("Comprobar cuentas, difiere Moneda."))
+            else:
+                if self.cheques:
+                    raise UserError(_("No se puede enviar/recibir cheques a cuentas distintas de ARS."))
+                if self.efectivo:
+                    flag_error = not (self.journal_id.default_debit_account_id.currency_id.id != False and self.journal_id.default_debit_account_id.currency_id.id == self.cuenta_entidad_id.currency_id.id)
+                    flag_error = flag_error and not (self.journal_id.default_credit_account_id.currency_id.id != False and self.journal_id.default_credit_account_id.currency_id.id == self.cuenta_entidad_id.currency_id.id)
+                    if flag_error:
+                        raise UserError(_("Comprobar cuentas, difiere Moneda."))
+        
+        elif self.tipo_de_pago == 'transferenciaEntidad':
+            if self.cuenta_entidad_id.currency_id.id != self.cuenta_entidad2_id.currency_id.id:
+                raise UserError(_("Comprobar cuentas/Diario, difiere Moneda."))
+
+        elif self.tipo_de_pago == 'transferenciaContable':
+            if self.cuenta_id.currency_id.id != self.cuenta2_id.currency_id.id:
+                raise UserError(_("Comprobar cuentas/Diario, difiere Moneda."))
+
+
+    @api.onchange('efectivo')
+    def _reiniciar_efectivo(self):
+        self.journal_id = False
+        self.monto_efectivo = 0
+
+    @api.onchange('cheques')
+    def _reiniciar_cheques(self):
+        self.enviar_cheques_ids = False
+        self.journal_recibir_cheques_id = False
+
     @api.onchange('tipo_de_pago')
     def _reiniciar_formulario(self):
-        _logger.error("tipo_de_pago onchange")
         self.journal_id = False
         self.deposito_bancario = False
         self.cuenta_entidad_id = False
@@ -132,18 +170,15 @@ class transferencia(osv.Model):
 
     @api.onchange('cuenta_entidad_id')
     def _reiniciar_subcuenta_id(self):
-        _logger.error("subcuenta1")
         if self.cuenta_entidad_id:
             self.subcuenta_id = False
 
     @api.onchange('cuenta_entidad2_id')
     def _reiniciar_subcuenta2_id(self):
-        _logger.error("subcuenta2")
         if self.cuenta_entidad2_id:
             self.subcuenta2_id = False
 
     def editar(self, cr, uid, ids, context=None):
-        _logger.error("self2: %r", self)
         self.write(cr, uid, ids, {'state':'borrador'}, context=None)
         return True
 
@@ -151,6 +186,7 @@ class transferencia(osv.Model):
     def confirmar(self, cr):
         self.state = 'confirmada'
         company_id = self.env['res.users'].browse(self.env.uid).company_id.id
+        company_currency_id = self.env['res.users'].browse(self.env.uid).currency_id.id
         journal_asiento_id = None
 
         if self.tipo_de_pago == 'enviarDinero':
@@ -174,32 +210,51 @@ class transferencia(osv.Model):
                 boleta_deposito = self.cuenta_entidad_id.display_name + '/' + self.subcuenta_id.name
 
             if self.efectivo == True:
-                _logger.error("efectivo == True")
                 if self.monto_efectivo > 0:
-                    _logger.error("efectivo > 0")
                     # create move line
                     # Registro el monto en efectivo que sale de caja
-                    _logger.error("account_id 1: %r", self.journal_id.default_debit_account_id.id)
-                    aml = {
-                        'date': self.fecha,
-                        'account_id': self.journal_id.default_debit_account_id.id,
-                        'name': 'Pago - Enviar dinero - '+ self.cuenta_entidad_id.display_name,
-                        'partner_id': partner_id,
-                        'credit': self.monto_efectivo,
-                    }
+                    if self.journal_id.default_debit_account_id.currency_id.id == False or self.journal_id.default_debit_account_id.currency_id.id == company_currency_id:
+                        aml = {
+                            'date': self.fecha,
+                            'account_id': self.journal_id.default_debit_account_id.id,
+                            'name': 'Pago - Enviar dinero - '+ self.cuenta_entidad_id.display_name,
+                            'partner_id': partner_id,
+                            'credit': self.monto_efectivo,
+                        }
+                    else:
+                        aml = {
+                            'date': self.fecha,
+                            'account_id': self.journal_id.default_debit_account_id.id,
+                            'name': 'Pago - Enviar dinero - '+ self.cuenta_entidad_id.display_name,
+                            'partner_id': partner_id,
+                            'currency_id': self.journal_id.default_debit_account_id.currency_id.id,
+                            'amount_currency': -self.monto_efectivo,
+                            'credit': self.monto_efectivo * self.journal_id.default_debit_account_id.currency_id.rate,
+                        }
                     line_ids.append((0,0,aml))
 
                     # create move line
                     # Registro el monto de efectivo entregado a la entidad o depositado
-                    _logger.error("account_id 2: %r", account_id.id)
-                    aml2 = {
-                        'date': self.fecha,
-                        'account_id': account_id.id,
-                        'name': 'Efectivo - '+ self.journal_id.default_debit_account_id.name,
-                        'partner_id': partner_id,
-                        'debit': self.monto_efectivo,
-                        'subcuenta_id': subcuenta_id,
-                    }
+                    if account_id.currency_id.id == False or account_id.currency_id.id == company_currency_id:
+                        aml2 = {
+                            'date': self.fecha,
+                            'account_id': account_id.id,
+                            'name': 'Efectivo - '+ self.journal_id.default_debit_account_id.name,
+                            'partner_id': partner_id,
+                            'debit': self.monto_efectivo,
+                            'subcuenta_id': subcuenta_id,
+                        }
+                    else:
+                        aml2 = {
+                            'date': self.fecha,
+                            'account_id': account_id.id,
+                            'name': 'Efectivo - '+ self.journal_id.default_debit_account_id.name,
+                            'partner_id': partner_id,
+                            'currency_id': account_id.currency_id.id,
+                            'amount_currency': self.monto_efectivo,
+                            'debit': self.monto_efectivo * account_id.currency_id.rate,
+                            'subcuenta_id': subcuenta_id,
+                        }
                     line_ids.append((0,0,aml2))
                     journal_asiento_id = self.journal_id.id
             if self.cheques == True:
@@ -214,7 +269,6 @@ class transferencia(osv.Model):
 
                     # create move line
                     # Monto y detalle del cheque en la cuenta receptora o cuenta donde se deposito
-                    _logger.error("account_id 3: %r", account_id.id)
                     amlfor = {
                         'date': self.fecha,
                         'account_id': account_id.id,
@@ -236,7 +290,6 @@ class transferencia(osv.Model):
                     else:
                         # create move line
                         # Monto y detalle del cheque que sale
-                        _logger.error("account_id 4: %r", account_cheques_id)
                         amlfor2 = {
                             'date': self.fecha,
                             'account_id': account_cheques_id,
@@ -247,9 +300,7 @@ class transferencia(osv.Model):
                         line_ids.append((0,0,amlfor2))
 
             if self.gastos == True:
-                _logger.error("gastos == True")
                 if self.monto_gasto > 0:
-                    _logger.error("monto_gasto > 0")
                     # create move line
                     # Registro el monto de gasto como egreso
                     aml = {
@@ -273,7 +324,6 @@ class transferencia(osv.Model):
                     }
                     line_ids.append((0,0,aml2))
                 if self.porcentaje_gasto > 0 and monto_en_cheques > 0:
-                    _logger.error("procentaje > 0")
                     # create move line
                     # Registro el monto de gasto como egreso
                     monto_porcentaje_gasto = monto_en_cheques*self.porcentaje_gasto/100
@@ -318,7 +368,6 @@ class transferencia(osv.Model):
         if self.tipo_de_pago == 'recibirDinero':
             #list of move line
             line_ids = []
-            _logger.error("recibirDinero")
             if self.subcuenta_id.tipo == 'activo':
                 account_id = self.cuenta_entidad_id.account_cobrar_id.id
             else:
@@ -329,29 +378,50 @@ class transferencia(osv.Model):
                 if self.monto_efectivo > 0:
                     # create move line
                     # Registro el monto en efectivo que ingresa a caja
-                    aml = {
-                        'date': self.fecha,
-                        'account_id': self.journal_id.default_debit_account_id.id,
-                        'name': 'Cobro - Recibir dinero - '+ self.cuenta_entidad_id.display_name,
-                        'partner_id': self.cuenta_entidad_id.entidad_id.id,
-                        'debit': self.monto_efectivo,
-                    }
+                    if self.journal_id.default_debit_account_id.currency_id.id == False or self.journal_id.default_debit_account_id.currency_id.id == company_currency_id:
+                        aml = {
+                            'date': self.fecha,
+                            'account_id': self.journal_id.default_debit_account_id.id,
+                            'name': 'Cobro - Recibir dinero - '+ self.cuenta_entidad_id.display_name,
+                            'partner_id': self.cuenta_entidad_id.entidad_id.id,
+                            'debit': self.monto_efectivo,
+                        }
+                    else:
+                        aml = {
+                            'date': self.fecha,
+                            'account_id': self.journal_id.default_debit_account_id.id,
+                            'name': 'Cobro - Recibir dinero - '+ self.cuenta_entidad_id.display_name,
+                            'partner_id': self.cuenta_entidad_id.entidad_id.id,
+                            'currency_id':self.journal_id.default_debit_account_id.currency_id.id,
+                            'amount_currency': self.monto_efectivo,
+                            'debit': self.monto_efectivo * self.journal_id.default_debit_account_id.currency_id.rate,
+                        }
                     line_ids.append((0,0,aml))
 
                     # create move line
                     # Registro el monto de efectivo entregado por la entidad
-                    aml2 = {
+                    if self.cuenta_entidad_id.currency_id.id == False or self.cuenta_entidad_id.currency_id.id == company_currency_id:
+                        aml2 = {
+                            'date': self.fecha,
+                            'account_id': account_id,
+                            'name': 'Efectivo - '+ self.journal_id.name,
+                            'partner_id': self.cuenta_entidad_id.entidad_id.id,
+                            'credit': self.monto_efectivo,
+                            'subcuenta_id': self.subcuenta_id.id,
+                        }
+                    else:
+                        aml2 = {
                         'date': self.fecha,
                         'account_id': account_id,
                         'name': 'Efectivo - '+ self.journal_id.name,
                         'partner_id': self.cuenta_entidad_id.entidad_id.id,
-                        'credit': self.monto_efectivo,
+                        'currency_id':self.cuenta_entidad_id.currency_id.id,
+                        'amount_currency': -self.monto_efectivo,
+                        'credit': self.monto_efectivo * self.cuenta_entidad_id.currency_id.rate,
                         'subcuenta_id': self.subcuenta_id.id,
                     }
                     line_ids.append((0,0,aml2))
             if self.cheques == True:
-                _logger.error("Recibir cheques!!!")
-                _logger.error("account_id: %r", account_id)
                 for cheque in self.recibir_cheques_ids:
 
                     cheque.state = 'draft'
@@ -383,7 +453,6 @@ class transferencia(osv.Model):
                     line_ids.append((0,0,amlfor2))
 
             journal_asiento_id = self.journal_id.id or self.journal_recibir_cheques_id.id
-            _logger.error("jorunal_id!!:: %r", journal_asiento_id)
             # create move
             move_name = 'Cobro - Recibir Dinero/'+str(self.id)
             move = self.env['account.move'].create({
@@ -404,45 +473,65 @@ class transferencia(osv.Model):
 
 
         if self.tipo_de_pago == 'transferenciaEntidad':
-            _logger.error("transferenciaEntidad!!!")
             #inicializacion
             line_ids = []
 
             if self.subcuenta_id.tipo == 'activo':
-                account_id = self.cuenta_entidad_id.account_cobrar_id.id
+                account_id = self.cuenta_entidad_id.account_cobrar_id
             else:
-                account_id = self.cuenta_entidad_id.account_pagar_id.id
+                account_id = self.cuenta_entidad_id.account_pagar_id
             # create move line
             # Registro el monto en efectivo que sale de la cuenta emisora
-            aml = {
-                'date': self.fecha,
-                'account_id': account_id,
-                'name': 'Transferencia - destino: '+ self.cuenta_entidad2_id.display_name + ' subcuenta: '+self.subcuenta2_id.name,
-                'partner_id': self.cuenta_entidad_id.entidad_id.id,
-                'debit': self.monto,
-                'subcuenta_id': self.subcuenta_id.id,
-            }
+            if account_id.currency_id.id == False or account_id.currency_id.id == company_currency_id:
+                aml = {
+                    'date': self.fecha,
+                    'account_id': account_id.id,
+                    'name': 'Transferencia - destino: '+ self.cuenta_entidad2_id.display_name + ' subcuenta: '+self.subcuenta2_id.name,
+                    'partner_id': self.cuenta_entidad_id.entidad_id.id,
+                    'credit': self.monto,
+                    'subcuenta_id': self.subcuenta_id.id,
+                }
+            else:
+                aml = {
+                    'date': self.fecha,
+                    'account_id': account_id.id,
+                    'name': 'Transferencia - destino: '+ self.cuenta_entidad2_id.display_name + ' subcuenta: '+self.subcuenta2_id.name,
+                    'partner_id': self.cuenta_entidad_id.entidad_id.id,
+                    'currency_id': account_id.currency_id.id,
+                    'amount_currency': -self.monto,
+                    'credit': self.monto * account_id.currency_id.rate,
+                    'subcuenta_id': self.subcuenta_id.id,
+                }
             line_ids.append((0,0,aml))
-            _logger.error("aml: %r", aml)
-
 
             if self.subcuenta2_id.tipo == 'activo':
-                account2_id = self.cuenta_entidad2_id.account_cobrar_id.id
+                account2_id = self.cuenta_entidad2_id.account_cobrar_id
             else:
-                account2_id = self.cuenta_entidad2_id.account_pagar_id.id
+                account2_id = self.cuenta_entidad2_id.account_pagar_id
 
             # create move line
             # Registro el monto de efectivo entregado a la entidad receptora
-            aml2 = {
-                'date': self.fecha,
-                'account_id': account2_id,
-                'name': 'Transferencia - origen: '+ self.cuenta_entidad_id.entidad_id.display_name + ' subcuenta: '+self.subcuenta_id.name,
-                'partner_id': self.cuenta_entidad2_id.entidad_id.id,
-                'credit': self.monto,
-                'subcuenta_id': self.subcuenta2_id.id,
-            }
+            if account2_id.currency_id.id == False or account2_id.currency_id.id == company_currency_id:
+                aml2 = {
+                    'date': self.fecha,
+                    'account_id': account2_id.id,
+                    'name': 'Transferencia - origen: '+ self.cuenta_entidad_id.entidad_id.display_name + ' subcuenta: '+self.subcuenta_id.name,
+                    'partner_id': self.cuenta_entidad2_id.entidad_id.id,
+                    'debit': self.monto,
+                    'subcuenta_id': self.subcuenta2_id.id,
+                }
+            else:
+                aml2 = {
+                    'date': self.fecha,
+                    'account_id': account2_id.id,
+                    'name': 'Transferencia - origen: '+ self.cuenta_entidad_id.entidad_id.display_name + ' subcuenta: '+self.subcuenta_id.name,
+                    'partner_id': self.cuenta_entidad2_id.entidad_id.id,
+                    'currency_id': account2_id.currency_id.id,
+                    'amount_currency': self.monto,
+                    'debit': self.monto * account_id.currency_id.rate,
+                    'subcuenta_id': self.subcuenta2_id.id,
+                }
             line_ids.append((0,0,aml2))
-            _logger.error("aml: %r", aml2)
 
             # create move
             move_name = 'Transferencia - Entre entidades/'+str(self.id)
@@ -450,13 +539,12 @@ class transferencia(osv.Model):
                 'name': move_name,
                 'ref': move_name,
                 'date': self.fecha,
-                'journal_id': self.journal_id.id,
+                'journal_id': self.journal_transferencia_id.id,
                 'state':'draft',
                 'company_id': company_id,
                 'partner_id': self.cuenta_entidad_id.entidad_id.id,
                 'line_ids': line_ids,
             })
-            _logger.error("move: %r", move)
             #move.state = 'posted'
             self.move_id = move.id
             self.state_move_id = move.state
@@ -466,30 +554,47 @@ class transferencia(osv.Model):
 
 
         if self.tipo_de_pago == 'transferenciaContable':
-            _logger.error("transferenciaContable!!!")
             #inicializacion
             line_ids = []
             # create move line
             # Registro el monto en efectivo que sale de caja
-            aml = {
+            if self.cuenta_id.currency_id.id == False or self.cuenta_id.currency_id.id == company_currency_id:
+                aml = {
+                    'date': self.fecha,
+                    'account_id': self.cuenta_id.id,
+                    'name': 'Transferencia - destino: '+ self.cuenta2_id.name,
+                    'credit': self.monto,
+                }
+            else:
+                aml = {
                 'date': self.fecha,
                 'account_id': self.cuenta_id.id,
                 'name': 'Transferencia - destino: '+ self.cuenta2_id.name,
-                'credit': self.monto,
+                'currency_id': self.cuenta_id.currency_id.id,
+                'amount_currency': -self.monto,
+                'credit': self.monto * self.cuenta_id.currency_id.rate,
             }
             line_ids.append((0,0,aml))
-            _logger.error("aml: %r", aml)
 
             # create move line
             # Registro el monto de efectivo entregado a la entidad o depositado
-            aml2 = {
+            if self.cuenta2_id.currency_id.id == False or self.cuenta2_id.currency_id.id == company_currency_id:
+                aml2 = {
+                    'date': self.fecha,
+                    'account_id': self.cuenta2_id.id,
+                    'name': 'Transferencia - origen: '+ self.cuenta_id.name,
+                    'debit': self.monto,
+                }
+            else:
+                aml2 = {
                 'date': self.fecha,
                 'account_id': self.cuenta2_id.id,
                 'name': 'Transferencia - origen: '+ self.cuenta_id.name,
-                'debit': self.monto,
+                'currency_id': self.cuenta2_id.currency_id.id,
+                'amount_currency': self.monto,
+                'debit': self.monto * self.cuenta2_id.currency_id.rate,
             }
             line_ids.append((0,0,aml2))
-            _logger.error("aml: %r", aml2)
 
             # create move
             move_name = 'Transferencia - Contable/'+str(self.id)
@@ -497,19 +602,17 @@ class transferencia(osv.Model):
                 'name': move_name,
                 'ref': move_name,
                 'date': self.fecha,
-                'journal_id': self.journal_id.id,
+                'journal_id': self.journal_transferencia_id.id,
                 'state':'draft',
                 'company_id': company_id,
                 'line_ids': line_ids,
             })
-            _logger.error("move: %r", move)
             #move.state = 'posted'
             self.move_id = move.id
             self.state_move_id = move.state
 
     @api.multi
     def registrar(self, cr):
-        _logger.error("registraar: %r", self)
         self.state = 'registrada'
         self.move_id.state = 'posted'
         self.state_move_id = 'posted'
@@ -519,7 +622,6 @@ class transferencia(osv.Model):
 
     @api.multi
     def cancelar(self, cr):
-        _logger.error("cancelar: %r", self)
         self.state = 'cancelada'
         self.move_id.unlink()
         self.state_move_id = 'deleted'

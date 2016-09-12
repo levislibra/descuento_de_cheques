@@ -35,6 +35,8 @@
 
                         <field name="tipo_de_pago" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
 
+                        <field name="journal_transferencia_id" attrs="{'invisible': [('tipo_de_pago', 'in', ('recibirDinero', 'enviarDinero'))], 'readonly': [('state', '!=', 'borrador')], 'required': [('tipo_de_pago', 'in', ('transferenciaContable', 'transferenciaEntidad'))]}"/>
+
                         <field name="deposito_bancario" attrs="{'invisible': [('tipo_de_pago', '!=', 'enviarDinero')], 'readonly': [('state', '!=', 'borrador')]}"/>
                     </group>
 
@@ -117,6 +119,8 @@
                                     <field name="partner_id"/>
                                     <field name="account_id"/>
                                     <field name="name"/>
+                                    <field name="amount_currency"/>
+                                    <field name="currency_id"/>
                                     <field name="debit" sum="Total"/>
                                     <field name="credit" sum="Total"/>
                                     <field name="move_id"/>

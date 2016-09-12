@@ -91,7 +91,6 @@ class plazo_fijo(osv.Model):
 
     @api.multi
     def cancelar(self, cr):
-        _logger.error("cancelar: %r", self)
         self.state = 'borrador'
         self.move_capital_id.unlink()
         for cuota in self.cuotas_ids:
@@ -166,7 +165,6 @@ class plazo_fijo(osv.Model):
     @api.multi
     def hola(self, cr):
         self.cancelar(cr)
-        _logger.error("holaaaaaaaaa: %r", self)
         self.state = 'generado'
         self._crear_asiento_capital()
         cuotas_ids = []

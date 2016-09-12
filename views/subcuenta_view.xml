@@ -13,6 +13,8 @@
                 <field name="name"/>
                 <field name="debit" sum="Total Debito"/>
                 <field name="credit" sum="Total Credito"/>
+                <field name="currency_id"/>
+                <field name="amount_currency" sum="Total saldo"/>
                 <field name="monto_interes" sum="Total Intereses"/>
                 <field name="saldo"/>
                 <field name="dias"/>
@@ -79,6 +81,7 @@
             <form string="Subcuenta" editable="bottom">
                 <header>
                     <button name="activar" states="borrador" string="Activar" type="object"/>
+                    <button name="ver_subcuentas" string="Ver sub" type="action"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
